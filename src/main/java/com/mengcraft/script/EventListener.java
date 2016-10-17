@@ -17,16 +17,22 @@ public class EventListener implements Listener {
 
     private final List<HandledListener> list = new LinkedList<>();
     private final HandlerList handler;
+    private final String name;
     private ScriptListener[] pipe;
 
     public EventListener(EventMapping.Mapping mapping) {
         handler = EventMapping.getHandler(mapping);
+        name = mapping.getName();
     }
 
     public void handle(Event event) {
         for (ScriptListener listener : pipe) {
             listener.handle(event);
         }
+    }
+
+    public boolean isHandled(HandledListener listener) {
+        return list.contains(listener);
     }
 
     public boolean remove(HandledListener listener) {
@@ -71,6 +77,10 @@ public class EventListener implements Listener {
                 list.add(index, handled);
             }
         }
+    }
+
+    public String getName() {
+        return name;
     }
 
 }

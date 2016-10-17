@@ -25,10 +25,17 @@ public class EventMapping {
 
     public final static class Mapping {
         private final Class<?> clz;
+        private final String name;
+
         private EventListener listener;
 
         private Mapping(Class<?> clz) {
             this.clz = clz;
+            name = clz.getSimpleName().toLowerCase();
+        }
+
+        public String getName() {
+            return name;
         }
 
         private EventListener getListener() {
