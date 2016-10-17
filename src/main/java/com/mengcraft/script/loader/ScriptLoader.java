@@ -24,7 +24,7 @@ public class ScriptLoader {
     @SuppressWarnings("unchecked")
     public static ScriptPlugin load(Main main, File file) throws ScriptPluginException {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-        ScriptPlugin plugin = new ScriptPlugin(main);
+        ScriptPlugin plugin = new ScriptPlugin(main, file);
         try {
             engine.put("plugin", plugin);
             engine.eval(new FileReader(file));
@@ -36,7 +36,7 @@ public class ScriptLoader {
                     plugin.setDescription("name", file.getName());
                 }
                 main.getLogger().info(load(plugin));
-                main.getLogger().info(loadHandler(plugin, engine));
+                main.getLogger().info(loadListener(plugin, engine));
             } else {
                 main.getLogger().info("Load script " + file.getName());
             }
@@ -62,7 +62,7 @@ public class ScriptLoader {
         return b.toString();
     }
 
-    private static String loadHandler(ScriptPlugin plugin, ScriptEngine engine) {
+    private static String loadListener(ScriptPlugin plugin, ScriptEngine engine) {
         String handle = plugin.getDescription("handle");
         if (!nil(handle) && EventMapping.INSTANCE.initialized(handle)) {
             ScriptListener listener = getInterface(engine, ScriptListener.class);

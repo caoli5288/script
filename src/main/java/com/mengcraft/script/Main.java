@@ -1,5 +1,7 @@
 package com.mengcraft.script;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -16,7 +18,7 @@ import java.util.logging.Level;
 /**
  * Created on 16-10-17.
  */
-public class Main extends JavaPlugin {
+public final class Main extends JavaPlugin {
 
     private final Map<String, ScriptPlugin> plugin = new HashMap<>();
 
@@ -33,7 +35,7 @@ public class Main extends JavaPlugin {
                 try {
                     plugin.put(i, ScriptLoader.load(this, file));
                 } catch (ScriptPluginException e) {
-                    e.getPlugin().shutdown();
+                    e.getPlugin().unload();
                     getLogger().log(Level.WARNING, e.getMessage() + " while load " + i);
                 }
             }
@@ -42,7 +44,9 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        plugin.forEach((i, plugin) -> plugin.shutdown());
+        for (Map.Entry<String, ScriptPlugin> i : new HashMap<>(plugin).entrySet()) {
+            i.getValue().unload();
+        }
     }
 
 
@@ -52,6 +56,14 @@ public class Main extends JavaPlugin {
 
     public int process(Runnable runnable, int delay, int repeat) {
         return getServer().getScheduler().runTaskTimer(this, runnable, delay, repeat).getTaskId();
+    }
+
+    public void unload(ScriptPlugin i) {
+        Preconditions.checkArgument(!(i == null));
+        ScriptPlugin get = plugin.get(i.toString());
+        if (get == i) {
+            plugin.remove(i.toString());
+        }
     }
 
     @SuppressWarnings("all")
@@ -67,4 +79,5 @@ public class Main extends JavaPlugin {
     public static boolean nil(Object i) {
         return i == null;
     }
+
 }
