@@ -46,6 +46,14 @@ public class Main extends JavaPlugin {
     }
 
 
+    public int execute(Runnable runnable, int delay, int repeat) {
+        return getServer().getScheduler().runTaskTimerAsynchronously(this, runnable, delay, repeat).getTaskId();
+    }
+
+    public int process(Runnable runnable, int delay, int repeat) {
+        return getServer().getScheduler().runTaskTimer(this, runnable, delay, repeat).getTaskId();
+    }
+
     @SuppressWarnings("all")
     public static <T, E> T[] collect(Class<T> type, List<E> in, Function<E, T> func) {
         List<T> handle = new ArrayList<>(in.size());
@@ -59,5 +67,4 @@ public class Main extends JavaPlugin {
     public static boolean nil(Object i) {
         return i == null;
     }
-
 }

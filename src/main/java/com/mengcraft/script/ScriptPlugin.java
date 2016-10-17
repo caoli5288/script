@@ -1,9 +1,10 @@
 package com.mengcraft.script;
 
+import com.google.common.collect.ImmutableList;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,16 +14,21 @@ import java.util.UUID;
  */
 public class ScriptPlugin {
 
-    private final List<HandledListener> listener = new ArrayList<>();
-    private final Map<String, Object> description = new HashMap<>();
+    private final List<HandledListener> listener = new LinkedList<>();
+    private final List<HandledTask> scheduled = new LinkedList<>();
     private final Main main;
+    private final Map<String, Object> description = new HashMap<>();
 
     public ScriptPlugin(Main main) {
         this.main = main;
     }
 
+    public List<HandledTask> getScheduled() {
+        return ImmutableList.copyOf(scheduled);
+    }
+
     public List<HandledListener> getListener() {
-        return new ArrayList<>(listener);
+        return ImmutableList.copyOf(listener);
     }
 
     public String getDescription(String key) {
@@ -36,6 +42,11 @@ public class ScriptPlugin {
         for (HandledListener i : listener) {
             i.remove();
         }
+        for (HandledTask i : scheduled) {
+            i.cancel();
+        }
+        listener.clear();
+        scheduled.clear();
     }
 
     public Player getPlayer(String id) {
@@ -44,6 +55,27 @@ public class ScriptPlugin {
 
     public Player getPlayer(UUID id) {
         return main.getServer().getPlayer(id);
+    }
+
+    public HandledTask schedule(Runnable runnable, int delay, int repeat, boolean thread) {
+        HandledTask i;
+        if (thread) {
+            i = new HandledTask(this, main.execute(runnable, delay, repeat));
+        }
+        i = new HandledTask(this, main.process(runnable, delay, repeat));
+        scheduled.add(i);
+        return i;
+    }
+
+    public int run(Runnable runnable) {
+        return run(runnable, false);
+    }
+
+    public int run(Runnable runnable, boolean thread) {
+        if (thread) {
+            return main.execute(runnable, -1, -1);
+        }
+        return main.process(runnable, -1, -1);
     }
 
     public HandledListener addListener(String event, ScriptListener i) {
