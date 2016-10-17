@@ -1,9 +1,12 @@
 package com.mengcraft.script;
 
+import org.bukkit.entity.Player;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created on 16-10-17.
@@ -33,6 +36,14 @@ public class ScriptPlugin {
         for (EventListener.HandledListener i : handled) {
             i.remove();
         }
+    }
+
+    public Player getPlayer(String id) {
+        return main.getServer().getPlayerExact(id);
+    }
+
+    public Player getPlayer(UUID id) {
+        return main.getServer().getPlayer(id);
     }
 
     public EventListener.HandledListener addListener(String name, ScriptListener listener) {
