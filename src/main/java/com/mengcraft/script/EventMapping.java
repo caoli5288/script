@@ -21,13 +21,13 @@ import static com.mengcraft.script.Main.nil;
  */
 public class EventMapping {
 
-    private final Map<String, Binding> mapping = new HashMap<>();
+    private final Map<String, Mapping> mapping = new HashMap<>();
 
-    public final static class Binding {
+    public final static class Mapping {
         private final Class<?> clz;
         private EventListener listener;
 
-        private Binding(Class<?> clz) {
+        private Mapping(Class<?> clz) {
             this.clz = clz;
         }
 
@@ -39,17 +39,11 @@ public class EventMapping {
         }
     }
 
-    protected void shutdown() {
-        mapping.forEach((i, binding) -> {
-            if (!nil(binding.listener)) binding.listener.shutdown();
-        });
-    }
-
     public boolean initialized(String name) {
         return mapping.containsKey(name.toLowerCase());
     }
 
-    protected EventListener getListener(String name) {
+    public EventListener getListener(String name) {
         String id = name.toLowerCase();
         if (!mapping.containsKey(id)) {
             throw new IllegalArgumentException("Not initialized");
@@ -92,7 +86,7 @@ public class EventMapping {
         if (mapping.containsKey(name)) {
             throw new IllegalArgumentException("Already initialized");
         }
-        mapping.put(name, new Binding(clz));
+        mapping.put(name, new Mapping(clz));
         Bukkit.getLogger().log(Level.INFO, "[Script] Initialized " + clz.getSimpleName());
     }
 
@@ -100,9 +94,9 @@ public class EventMapping {
         return Event.class.isAssignableFrom(clz) && Modifier.isPublic(clz.getModifiers()) && !Modifier.isAbstract(clz.getModifiers());
     }
 
-    protected static HandlerList getHandler(Binding binding) {
+    protected static HandlerList getHandler(Mapping mapping) {
         try {
-            Method e = binding.clz.getDeclaredMethod("getHandlerList");
+            Method e = mapping.clz.getDeclaredMethod("getHandlerList");
             e.setAccessible(true);
             return (HandlerList) e.invoke(null);
         } catch (Exception e) {

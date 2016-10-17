@@ -18,7 +18,7 @@ import java.util.logging.Level;
  */
 public class Main extends JavaPlugin {
 
-    private final Map<String, ScriptPlugin> map = new HashMap<>();
+    private final Map<String, ScriptPlugin> plugin = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -31,7 +31,7 @@ public class Main extends JavaPlugin {
             File file = new File(getDataFolder(), i);
             if (file.isFile()) {
                 try {
-                    map.put(i, ScriptLoader.load(this, file));
+                    plugin.put(i, ScriptLoader.load(this, file));
                 } catch (ScriptPluginException e) {
                     e.getPlugin().shutdown();
                     getLogger().log(Level.WARNING, e.getMessage() + " while load " + i);
@@ -42,8 +42,9 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        map.forEach((i, plugin) -> plugin.shutdown());
+        plugin.forEach((i, plugin) -> plugin.shutdown());
     }
+
 
     @SuppressWarnings("all")
     public static <T, E> T[] collect(Class<T> type, List<E> in, Function<E, T> func) {

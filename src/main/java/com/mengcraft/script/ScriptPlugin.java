@@ -13,16 +13,16 @@ import java.util.UUID;
  */
 public class ScriptPlugin {
 
-    private final List<EventListener.HandledListener> handled = new ArrayList<>();
-    private final Main main;
+    private final List<HandledListener> listener = new ArrayList<>();
     private final Map<String, Object> description = new HashMap<>();
+    private final Main main;
 
     public ScriptPlugin(Main main) {
         this.main = main;
     }
 
-    public List<EventListener.HandledListener> getHandled() {
-        return handled;
+    public List<HandledListener> getListener() {
+        return new ArrayList<>(listener);
     }
 
     public String getDescription(String key) {
@@ -33,7 +33,7 @@ public class ScriptPlugin {
     }
 
     public void shutdown() {
-        for (EventListener.HandledListener i : handled) {
+        for (HandledListener i : listener) {
             i.remove();
         }
     }
@@ -46,12 +46,23 @@ public class ScriptPlugin {
         return main.getServer().getPlayer(id);
     }
 
-    public EventListener.HandledListener addListener(String name, ScriptListener listener) {
-        return EventMapping.INSTANCE.getListener(name).addListener(main, this, listener, -1);
+    public HandledListener addListener(String event, ScriptListener i) {
+        return addListener(event, i, -1);
     }
 
-    public EventListener.HandledListener addListener(String name, ScriptListener listener, int priority) {
-        return EventMapping.INSTANCE.getListener(name).addListener(main, this, listener, priority);
+    public HandledListener addListener(String event, ScriptListener i, int priority) {
+        EventListener handle = EventMapping.INSTANCE.getListener(event);
+        HandledListener add = handle.add(main, new Listener(i, priority));
+        listener.add(add);
+        return add;
+    }
+
+    public HandledExecutor addExecutor(String label, ScriptExecutor executor, String permission) {
+        throw new UnsupportedOperationException();
+    }
+
+    public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
+        return addExecutor(label, executor, null);
     }
 
     public EventMapping getMapping() {
@@ -71,6 +82,24 @@ public class ScriptPlugin {
     @Override
     public String toString() {
         return description.toString();
+    }
+
+    public static class Listener {
+        private final ScriptListener listener;
+        private final int priority;
+
+        private Listener(ScriptListener listener, int priority) {
+            this.listener = listener;
+            this.priority = priority;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        public ScriptListener getListener() {
+            return listener;
+        }
     }
 
 }
