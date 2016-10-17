@@ -7,7 +7,7 @@ public class HandledListener implements Comparable<HandledListener> {
 
     private final ScriptListener listener;
     private final EventListener up;
-    private int priority;
+    private final int priority;
 
     public HandledListener(EventListener up, ScriptListener listener, int priority) {
         this.up = up;
@@ -25,10 +25,6 @@ public class HandledListener implements Comparable<HandledListener> {
 
     public int getPriority() {
         return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     @Override
