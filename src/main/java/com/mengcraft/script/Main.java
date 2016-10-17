@@ -1,7 +1,6 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -59,11 +58,12 @@ public final class Main extends JavaPlugin {
     }
 
     public void unload(ScriptPlugin i) {
-        Preconditions.checkArgument(!(i == null));
+        Preconditions.checkArgument(i.isLoaded() || plugin.containsKey(i.toString()));
         ScriptPlugin get = plugin.get(i.toString());
         if (get == i) {
             plugin.remove(i.toString());
         }
+        getLogger().info("Unloaded " + i);
     }
 
     @SuppressWarnings("all")

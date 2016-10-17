@@ -1,4 +1,4 @@
-package com.mengcraft.script;
+package com.mengcraft.script.loader;
 
 import java.util.HashMap;
 
@@ -10,7 +10,7 @@ public final class ScriptDescription extends HashMap<String, String> {
     @Override
     public String put(String key, String value) {
         if (!containsKey(key)) {
-            super.put(key, value);
+            return super.put(key, value);
         }
         return null;
     }

@@ -1,6 +1,8 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.mengcraft.script.loader.ScriptDescription;
+import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -9,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import static com.mengcraft.script.Main.nil;
 
@@ -22,12 +25,14 @@ public final class ScriptPlugin {
     private final File file;
 
     private final ScriptDescription description;
+    private final Logger logger;
     private Main main;
 
     public ScriptPlugin(Main main, File file) {
         this.file = file;
         this.main = main;
         description = new ScriptDescription();
+        logger = new ScriptLogger(main, this);
     }
 
     public List<HandledListener> getListener() {
@@ -35,10 +40,11 @@ public final class ScriptPlugin {
     }
 
     public String getDescription(String key) {
-        if (description.containsKey(key)) {
-            return description.get(key);
-        }
-        return null;
+        return description.get(key);
+    }
+
+    public boolean isLoaded() {
+        return !nil(main);
     }
 
     public void unload() {
@@ -51,6 +57,8 @@ public final class ScriptPlugin {
         for (HandledTask i : task) {
             i.cancel();
         }
+        task.clear();
+        listener.clear();
     }
 
     public Player getPlayer(String id) {
@@ -114,18 +122,25 @@ public final class ScriptPlugin {
         return addExecutor(label, executor, null);
     }
 
+    public Logger getLogger() {
+        Preconditions.checkState(!nil(main), "unloaded");
+        return logger;
+    }
+
     public EventMapping getMapping() {
         Preconditions.checkState(!nil(main), "unloaded");
         return EventMapping.INSTANCE;
     }
 
     public void setDescription(Map<String, Object> in) {
+        Preconditions.checkState(!nil(main), "unloaded");
         in.forEach((i, value) -> {
             description.put(i, value.toString());
         });
     }
 
     public void setDescription(String key, String value) {
+        Preconditions.checkState(!nil(main), "unloaded");
         description.put(key, value);
     }
 

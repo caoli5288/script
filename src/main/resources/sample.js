@@ -8,4 +8,9 @@ var description = {
 var handle = function(event) {
     var p = event.player
     p.sendMessage("hello, " + p.name)
+    plugin.schedule(function() {
+        p.sendMessage("bye bye")
+        plugin.logger.info("unload...")
+        plugin.unload()
+    }, 40);
 }
