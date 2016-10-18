@@ -122,6 +122,11 @@ public final class ScriptPlugin {
         }
     }
 
+    public boolean isCancelled(HandledTask i) {
+        Preconditions.checkArgument(i.getPlugin() == this, "unhandled");
+        return task.contains(i);
+    }
+
     public int run(Runnable runnable) {
         return run(runnable, false);
     }

@@ -17,12 +17,11 @@ public class HandledTask {
     }
 
     public void cancel() {
-        Bukkit.getScheduler().cancelTask(id);
+        plugin.cancel(this);
     }
 
     public boolean isCancelled() {
-        BukkitScheduler scheduler = Bukkit.getScheduler();
-        return !(scheduler.isCurrentlyRunning(id) || scheduler.isQueued(id));
+        return plugin.isCancelled(this);
     }
 
     public ScriptPlugin getPlugin() {
