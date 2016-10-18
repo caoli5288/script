@@ -35,7 +35,7 @@ public class EventListener implements Listener {
         return list.contains(listener);
     }
 
-    public boolean remove(HandledListener listener) {
+    protected boolean remove(HandledListener listener) {
         if (list.remove(listener)) {
             if (list.isEmpty()) {
                 handler.unregister(this);

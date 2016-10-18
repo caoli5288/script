@@ -6,7 +6,6 @@ import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -36,15 +35,15 @@ public final class ScriptPlugin {
     private List<HandledListener> listener = new LinkedList<>();
     private List<HandledTask> task = new LinkedList<>();
 
+    private final String id;
     private final ScriptDescription description;
-    private final File file;
     private final Logger logger;
 
     private Main main;
     private Runnable unloadHook;
 
-    public ScriptPlugin(Main main, File file) {
-        this.file = file;
+    public ScriptPlugin(Main main, String id) {
+        this.id = id;
         this.main = main;
         description = new ScriptDescription();
         logger = new ScriptLogger(main, this);
@@ -63,14 +62,15 @@ public final class ScriptPlugin {
     }
 
     public void unload() {
-        Preconditions.checkState(!nil(main), "unloaded");
-        main.unload(this);
-        main = null;
-        if (!nil(unloadHook)) unloadHook.run();
-        task.forEach(HandledTask::cancel);
-        listener.forEach(HandledListener::remove);
-        task = null;
-        listener = null;
+        if (isLoaded()) {
+            main.unload(this);
+            main = null;
+            if (!nil(unloadHook)) unloadHook.run();
+            task.forEach(HandledTask::cancel);
+            listener.forEach(HandledListener::remove);
+            task = null;
+            listener = null;
+        }
     }
 
     public Unsafe getUnsafe() {
@@ -102,7 +102,7 @@ public final class ScriptPlugin {
     }
 
     public HandledTask schedule(Runnable runnable, int delay, int period, boolean b) {
-        Preconditions.checkState(!nil(main), "unloaded");
+        Preconditions.checkState(isLoaded(), "unloaded");
         HandledTask i = new HandledTask(this);
         // may the only way remove one-shot task
         Runnable r = period < 0 ? () -> callback(i, runnable) : runnable;
@@ -160,7 +160,7 @@ public final class ScriptPlugin {
     }
 
     public HandledListener addListener(String event, ScriptListener i, int priority) {
-        Preconditions.checkState(!nil(main), "unloaded");
+        Preconditions.checkState(isLoaded(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(event);
         HandledListener add = handle.add(main, new Listener(this, i, priority));
         listener.add(add);
@@ -184,25 +184,25 @@ public final class ScriptPlugin {
     }
 
     public EventMapping getMapping() {
-        Preconditions.checkState(!nil(main), "unloaded");
+        Preconditions.checkState(isLoaded(), "unloaded");
         return EventMapping.INSTANCE;
     }
 
     public void setDescription(Map<String, Object> in) {
-        Preconditions.checkState(!nil(main), "unloaded");
+        Preconditions.checkState(isLoaded(), "unloaded");
         in.forEach((i, value) -> {
             description.put(i, value.toString());
         });
     }
 
     public void setDescription(String key, String value) {
-        Preconditions.checkState(!nil(main), "unloaded");
+        Preconditions.checkState(isLoaded(), "unloaded");
         description.put(key, value);
     }
 
     @Override
     public String toString() {
-        return file.getName();
+        return id;
     }
 
     public interface Unsafe {

@@ -12,6 +12,7 @@ import javax.script.ScriptException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.Reader;
 import java.util.Map;
 
 import static com.mengcraft.script.Main.nil;
@@ -21,27 +22,36 @@ import static com.mengcraft.script.Main.nil;
  */
 public class ScriptLoader {
 
-    @SuppressWarnings("unchecked")
     public static ScriptPlugin load(Main main, File file) throws ScriptPluginException {
+        FileReader reader = null;
+        try {
+            reader = new FileReader(file);
+        } catch (FileNotFoundException e) {
+            ScriptPluginException.thr(null, e.getMessage());
+        }
+        return load(main, "file:" + file.getName(), reader);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ScriptPlugin load(Main main, String id, Reader reader) throws ScriptPluginException {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-        ScriptPlugin plugin = new ScriptPlugin(main, file);
+        ScriptPlugin plugin = new ScriptPlugin(main, id);
         try {
             engine.put("plugin", plugin);
-            engine.eval(new FileReader(file));
+            engine.eval(reader);
             Object description = engine.get("description");
-            if (!nil(description) && description instanceof Map) {
-                Map map = Map.class.cast(description);
-                plugin.setDescription(map);
+            if (Map.class.isInstance(description)) {
+                plugin.setDescription((Map) description);
                 if (nil(plugin.getDescription("name"))) {
-                    plugin.setDescription("name", file.getName());
+                    plugin.setDescription("name", id);
                 }
                 main.getLogger().info(load(plugin));
                 main.getLogger().info(loadListener(plugin, engine));
             } else {
-                main.getLogger().info("Load script " + file.getName());
+                main.getLogger().info("Load script " + id);
             }
-        } catch (ScriptException | FileNotFoundException e) {
-            throw new ScriptPluginException(plugin, e.getMessage());
+        } catch (ScriptException e) {
+            ScriptPluginException.thr(plugin, e.getMessage());
         }
         return plugin;
     }

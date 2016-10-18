@@ -1,5 +1,6 @@
 package com.mengcraft.script;
 
+import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -18,7 +19,7 @@ import java.util.logging.Level;
  */
 public final class Main extends JavaPlugin {
 
-    private final Map<String, ScriptPlugin> plugin = new HashMap<>();
+    private Map<String, ScriptPlugin> plugin;
 
     @Override
     public void onEnable() {
@@ -26,27 +27,7 @@ public final class Main extends JavaPlugin {
 
         EventMapping.INSTANCE.init(getServer().getClass().getClassLoader());// Register build-in event
 
-        List<String> list = getConfig().getStringList("script");
-        for (String i : list) {
-            load(new File(getDataFolder(), i));
-        }
-    }
-
-    private void load(File file) {
-        if (file.isFile()) {
-            try {
-                ScriptPlugin loaded = ScriptLoader.load(this, file);
-                String name = loaded.getDescription("name");
-                ScriptPlugin i = this.plugin.get(name);
-                if (!nil(i)) {
-                    throw new ScriptPluginException(loaded, "Name conflict with " + i);
-                }
-                this.plugin.put(name, loaded);
-            } catch (ScriptPluginException e) {
-                e.getPlugin().unload();
-                getLogger().log(Level.WARNING, e.getMessage() + " while load " + e);
-            }
-        }
+        load();
     }
 
     @Override
@@ -54,8 +35,45 @@ public final class Main extends JavaPlugin {
         for (Map.Entry<String, ScriptPlugin> i : new HashMap<>(plugin).entrySet()) {
             i.getValue().unload();
         }
+        plugin = null;
     }
 
+    protected void reload() {
+        onDisable();
+        load();
+    }
+
+    private void load() {
+        plugin = new HashMap<>();
+        List<String> list = getConfig().getStringList("script");
+        for (String i : list) {
+            try {
+                load(new File(getDataFolder(), i));
+            } catch (ScriptPluginException e) {
+                getLogger().log(Level.WARNING, e.getMessage());
+            }
+        }
+    }
+
+    protected void load(File file) throws ScriptPluginException {
+        Preconditions.checkArgument(file.isFile());
+        Preconditions.checkArgument(!isLoad(file));
+        ScriptPlugin loaded = ScriptLoader.load(this, file);
+        String name = loaded.getDescription("name");
+        ScriptPlugin i = plugin.get(name);
+        if (!nil(i)) {
+            ScriptPluginException.thr(loaded, "Name conflict with " + i);
+        }
+        plugin.put(name, loaded);
+    }
+
+    private boolean isLoad(File file) {
+        String id = "file:" + file.getName();
+        for (ScriptPlugin i : plugin.values()) {
+            if (i.toString().equals(id)) return true;
+        }
+        return false;
+    }
 
     public int execute(Runnable runnable, int delay, int repeat) {
         return getServer().getScheduler().runTaskTimerAsynchronously(this, runnable, delay, repeat).getTaskId();
