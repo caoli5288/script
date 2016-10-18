@@ -1,2 +1,2 @@
-# script
-Load script in bukkit server.
+# Script
+Load script in bukkit server. [sample](src/main/resources/sample.js)
