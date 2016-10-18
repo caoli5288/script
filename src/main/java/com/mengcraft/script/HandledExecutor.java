@@ -15,7 +15,7 @@ public class HandledExecutor {
     private final ScriptExecutor executor;
     private final String permission;
 
-    public HandledExecutor(String label, ScriptExecutor executor, String permission) {
+    public HandledExecutor(String label, String permission, ScriptExecutor executor) {
         this.label = label;
         this.executor = executor;
         this.permission = permission;

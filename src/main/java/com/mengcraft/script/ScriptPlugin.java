@@ -22,10 +22,6 @@ import static com.mengcraft.script.Main.nil;
  */
 public final class ScriptPlugin {
 
-    private final List<HandledListener> listener = new LinkedList<>();
-    private final List<HandledTask> task = new LinkedList<>();
-    private final File file;
-
     private final Unsafe unsafe = new Unsafe() {
         public Plugin getJavaPlugin(String id) {
             return main.getServer().getPluginManager().getPlugin(id);
@@ -36,9 +32,15 @@ public final class ScriptPlugin {
         }
     };
 
+    private List<HandledListener> listener = new LinkedList<>();
+    private List<HandledTask> task = new LinkedList<>();
+
     private final ScriptDescription description;
+    private final File file;
     private final Logger logger;
+
     private Main main;
+    private Runnable unloadHook;
 
     public ScriptPlugin(Main main, File file) {
         this.file = file;
@@ -63,14 +65,11 @@ public final class ScriptPlugin {
         Preconditions.checkState(!nil(main), "unloaded");
         main.unload(this);
         main = null;
-        for (HandledListener i : listener) {
-            i.remove();
-        }
-        for (HandledTask i : task) {
-            i.cancel();
-        }
-        task.clear();
-        listener.clear();
+        if (!nil(unloadHook)) unloadHook.run();
+        task.forEach(HandledTask::cancel);
+        listener.forEach(HandledListener::remove);
+        task = null;
+        listener = null;
     }
 
     public Unsafe getUnsafe() {
@@ -128,6 +127,7 @@ public final class ScriptPlugin {
     }
 
     public int run(Runnable runnable, boolean b) {
+        Preconditions.checkState(!nil(main), "unloaded");
         if (b) {
             return main.execute(runnable, -1, -1);
         }
@@ -146,16 +146,19 @@ public final class ScriptPlugin {
         return add;
     }
 
-    public HandledExecutor addExecutor(String label, ScriptExecutor executor, String permission) {
+    public HandledExecutor addExecutor(String label, String permission, ScriptExecutor executor) {
         throw new UnsupportedOperationException();
     }
 
     public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
-        return addExecutor(label, executor, null);
+        return addExecutor(label, null, executor);
+    }
+
+    public void setUnloadHook(Runnable unloadHook) {
+        this.unloadHook = unloadHook;
     }
 
     public Logger getLogger() {
-        Preconditions.checkState(!nil(main), "unloaded");
         return logger;
     }
 
