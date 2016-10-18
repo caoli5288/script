@@ -115,11 +115,13 @@ public final class ScriptPlugin {
         return schedule(runnable, delay, -1, false);
     }
 
-    public void cancel(HandledTask i) {
+    public boolean cancel(HandledTask i) {
         Preconditions.checkArgument(i.getPlugin() == this, "unhandled");
-        if (task.remove(i)) {
-            i.cancel();
+        boolean result = task.remove(i);
+        if (result) {
+            main.getServer().getScheduler().cancelTask(i.getId());
         }
+        return result;
     }
 
     public boolean isCancelled(HandledTask i) {

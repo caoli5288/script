@@ -16,12 +16,12 @@ public class HandledTask {
         this.id = id;
     }
 
-    public void cancel() {
-        plugin.cancel(this);
+    public int getId() {
+        return id;
     }
 
-    public boolean isCancelled() {
-        return plugin.isCancelled(this);
+    public boolean cancel() {
+        return plugin.cancel(this);
     }
 
     public ScriptPlugin getPlugin() {
