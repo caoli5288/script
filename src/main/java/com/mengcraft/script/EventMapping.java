@@ -90,11 +90,10 @@ public class EventMapping {
     public void init(Class<?> clz) {
         Preconditions.checkArgument(valid(clz), clz.getName() + " not valid");
         String name = clz.getSimpleName().toLowerCase();
-        if (mapping.containsKey(name)) {
-            throw new IllegalArgumentException("Already initialized");
+        if (!mapping.containsKey(name)) {
+            mapping.put(name, new Mapping(clz));
+            Bukkit.getLogger().log(Level.INFO, "[Script] Initialized " + clz.getSimpleName());
         }
-        mapping.put(name, new Mapping(clz));
-        Bukkit.getLogger().log(Level.INFO, "[Script] Initialized " + clz.getSimpleName());
     }
 
     private boolean valid(Class<?> clz) {

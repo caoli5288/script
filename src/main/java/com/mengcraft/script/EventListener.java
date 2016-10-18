@@ -48,7 +48,7 @@ public class EventListener implements Listener {
     }
 
     public HandledListener add(Main main, ScriptPlugin.Listener listener) {
-        HandledListener handled = new HandledListener(this, listener.getListener(), listener.getPriority());
+        HandledListener handled = new HandledListener(this, listener);
         if (list.isEmpty()) {
             handler.register(new RegisteredListener(this, (i, event) ->
                     handle(event),

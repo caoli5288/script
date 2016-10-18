@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.mengcraft.script.Main.nil;
@@ -102,43 +103,56 @@ public final class ScriptPlugin {
 
     public HandledTask schedule(Runnable runnable, int delay, int period, boolean b) {
         Preconditions.checkState(!nil(main), "unloaded");
-        HandledTask i;
-        if (b) {
-            i = new HandledTask(this, main.execute(runnable, delay, period));
-        }
-        i = new HandledTask(this, main.process(runnable, delay, period));
+        HandledTask i = new HandledTask(this);
+        // may the only way remove one-shot task
+        Runnable r = period < 0 ? () -> callback(i, runnable) : runnable;
+        i.setId(b ? main.execute(r, delay, period) : main.process(r, delay, period));
         task.add(i);
         return i;
+    }
+
+    public HandledTask schedule(Runnable runnable, int delay, int period) {
+        return schedule(runnable, delay, period, false);
+    }
+
+    public HandledTask schedule(Runnable runnable, int delay, boolean b) {
+        return schedule(runnable, delay, -1, b);
     }
 
     public HandledTask schedule(Runnable runnable, int delay) {
         return schedule(runnable, delay, -1, false);
     }
 
-    public boolean cancel(HandledTask i) {
-        Preconditions.checkArgument(i.getPlugin() == this, "unhandled");
-        boolean result = task.remove(i);
-        if (result) {
-            main.getServer().getScheduler().cancelTask(i.getId());
-        }
-        return result;
+    public HandledTask schedule(Runnable runnable, boolean b) {
+        return schedule(runnable, -1, -1, b);
     }
 
-    public boolean isCancelled(HandledTask i) {
-        Preconditions.checkArgument(i.getPlugin() == this, "unhandled");
-        return task.contains(i);
+    public HandledTask schedule(Runnable runnable) {
+        return schedule(runnable, -1, -1, false);
     }
 
-    public int run(Runnable runnable) {
-        return run(runnable, false);
+    private Runnable callback(HandledTask i, Runnable runnable) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                logger.log(Level.WARNING, e.getMessage(), e);
+            }
+            i.cancel();
+        };
     }
 
-    public int run(Runnable runnable, boolean b) {
-        Preconditions.checkState(!nil(main), "unloaded");
+    protected boolean cancel(HandledTask i) {
+        boolean b = task.remove(i);
         if (b) {
-            return main.execute(runnable, -1, -1);
+            main.getServer().getScheduler().cancelTask(i.getId());
+            i.setId(-1);
         }
-        return main.process(runnable, -1, -1);
+        return b;
+    }
+
+    protected boolean cancel(HandledListener i) {
+        return listener.remove(i);
     }
 
     public HandledListener addListener(String event, ScriptListener i) {
@@ -148,7 +162,7 @@ public final class ScriptPlugin {
     public HandledListener addListener(String event, ScriptListener i, int priority) {
         Preconditions.checkState(!nil(main), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(event);
-        HandledListener add = handle.add(main, new Listener(i, priority));
+        HandledListener add = handle.add(main, new Listener(this, i, priority));
         listener.add(add);
         return add;
     }
@@ -198,12 +212,18 @@ public final class ScriptPlugin {
     }
 
     public static class Listener {
+        private final ScriptPlugin plugin;
         private final ScriptListener listener;
         private final int priority;
 
-        private Listener(ScriptListener listener, int priority) {
+        private Listener(ScriptPlugin plugin, ScriptListener listener, int priority) {
+            this.plugin = plugin;
             this.listener = listener;
             this.priority = priority;
+        }
+
+        public ScriptPlugin getPlugin() {
+            return plugin;
         }
 
         public int getPriority() {
