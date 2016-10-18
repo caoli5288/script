@@ -1,6 +1,5 @@
 package com.mengcraft.script;
 
-import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,14 +28,23 @@ public final class Main extends JavaPlugin {
 
         List<String> list = getConfig().getStringList("script");
         for (String i : list) {
-            File file = new File(getDataFolder(), i);
-            if (file.isFile()) {
-                try {
-                    plugin.put(i, ScriptLoader.load(this, file));
-                } catch (ScriptPluginException e) {
-                    e.getPlugin().unload();
-                    getLogger().log(Level.WARNING, e.getMessage() + " while load " + i);
+            load(new File(getDataFolder(), i));
+        }
+    }
+
+    private void load(File file) {
+        if (file.isFile()) {
+            try {
+                ScriptPlugin loaded = ScriptLoader.load(this, file);
+                String name = loaded.getDescription("name");
+                ScriptPlugin i = this.plugin.get(name);
+                if (!nil(i)) {
+                    throw new ScriptPluginException(loaded, "Name conflict with " + i);
                 }
+                this.plugin.put(name, loaded);
+            } catch (ScriptPluginException e) {
+                e.getPlugin().unload();
+                getLogger().log(Level.WARNING, e.getMessage() + " while load " + e);
             }
         }
     }
@@ -57,13 +65,12 @@ public final class Main extends JavaPlugin {
         return getServer().getScheduler().runTaskTimer(this, runnable, delay, repeat).getTaskId();
     }
 
-    public void unload(ScriptPlugin i) {
-        Preconditions.checkArgument(i.isLoaded() || plugin.containsKey(i.toString()));
-        ScriptPlugin get = plugin.get(i.toString());
-        if (get == i) {
-            plugin.remove(i.toString());
-        }
-        getLogger().info("Unloaded " + i);
+    protected boolean unload(ScriptPlugin i) {
+        return plugin.remove(i.getDescription("name"), i);
+    }
+
+    public ScriptPlugin getPlugin(String id) {
+        return plugin.get(id);
     }
 
     @SuppressWarnings("all")

@@ -4,9 +4,11 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,16 @@ public final class ScriptPlugin {
     private final List<HandledListener> listener = new LinkedList<>();
     private final List<HandledTask> task = new LinkedList<>();
     private final File file;
+
+    private final Unsafe unsafe = new Unsafe() {
+        public Plugin getJavaPlugin(String id) {
+            return main.getServer().getPluginManager().getPlugin(id);
+        }
+
+        public ScriptPlugin getPlugin(String id) {
+            return main.getPlugin(id);
+        }
+    };
 
     private final ScriptDescription description;
     private final Logger logger;
@@ -61,12 +73,32 @@ public final class ScriptPlugin {
         listener.clear();
     }
 
+    public Unsafe getUnsafe() {
+        return unsafe;
+    }
+
     public Player getPlayer(String id) {
         return main.getServer().getPlayerExact(id);
     }
 
     public Player getPlayer(UUID id) {
         return main.getServer().getPlayer(id);
+    }
+
+    public Collection<?> getOnlineList() {
+        return main.getServer().getOnlinePlayers();
+    }
+
+    public Object getService(String id) {
+        Collection<Class<?>> set = main.getServer().getServicesManager().getKnownServices();
+        for (Class<?> i : set) {
+            if (i.getSimpleName().equals(id)) return getService(i);
+        }
+        return null;
+    }
+
+    public Object getService(Class<?> i) {
+        return main.getServer().getServicesManager().load(i);
     }
 
     public HandledTask schedule(Runnable runnable, int delay, int period, boolean b) {
@@ -147,6 +179,12 @@ public final class ScriptPlugin {
     @Override
     public String toString() {
         return file.getName();
+    }
+
+    public interface Unsafe {
+        Plugin getJavaPlugin(String id);
+
+        ScriptPlugin getPlugin(String id);
     }
 
     public static class Listener {
