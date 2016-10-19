@@ -22,7 +22,7 @@ import static com.mengcraft.script.Main.nil;
  */
 public class ScriptLoader {
 
-    public static ScriptPlugin load(Main main, File file) throws ScriptPluginException {
+    public static ScriptBinding load(Main main, File file) throws ScriptPluginException {
         FileReader reader = null;
         try {
             reader = new FileReader(file);
@@ -33,7 +33,7 @@ public class ScriptLoader {
     }
 
     @SuppressWarnings("unchecked")
-    public static ScriptPlugin load(Main main, String id, Reader reader) throws ScriptPluginException {
+    public static ScriptBinding load(Main main, String id, Reader reader) throws ScriptPluginException {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
         ScriptPlugin plugin = new ScriptPlugin(main, id);
         try {
@@ -53,7 +53,7 @@ public class ScriptLoader {
         } catch (ScriptException e) {
             ScriptPluginException.thr(plugin, e.getMessage());
         }
-        return plugin;
+        return ScriptBinding.bind(plugin, engine);
     }
 
     private static String load(ScriptPlugin plugin) {
@@ -88,6 +88,35 @@ public class ScriptLoader {
 
     private static <T> T getInterface(ScriptEngine engine, Class<T> i) {
         return Invocable.class.cast(engine).getInterface(i);
+    }
+
+    public final static class ScriptBinding {
+
+        private final ScriptPlugin plugin;
+        private final ScriptEngine engine;
+
+        private ScriptBinding(ScriptPlugin plugin, ScriptEngine engine) {
+            this.plugin = plugin;
+            this.engine = engine;
+        }
+
+        public ScriptPlugin getPlugin() {
+            return plugin;
+        }
+
+        public ScriptEngine getEngine() {
+            return engine;
+        }
+
+        @Override
+        public String toString() {
+            return plugin.toString();
+        }
+
+        public static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {
+            return new ScriptBinding(plugin, engine);
+        }
+
     }
 
 }

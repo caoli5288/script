@@ -2,10 +2,12 @@ package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
+import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import javax.script.ScriptEngine;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -23,12 +25,13 @@ import static com.mengcraft.script.Main.nil;
 public final class ScriptPlugin {
 
     private final Unsafe unsafe = new Unsafe() {
-        public Plugin getJavaPlugin(String id) {
+        public Plugin getPlugin(String id) {
             return main.getServer().getPluginManager().getPlugin(id);
         }
 
-        public ScriptPlugin getPlugin(String id) {
-            return main.getPlugin(id);
+        public ScriptEngine getScript(String id) {
+            ScriptLoader.ScriptBinding binding = main.getScript(id);
+            return !nil(binding) ? binding.getEngine() : null;
         }
     };
 
@@ -213,9 +216,9 @@ public final class ScriptPlugin {
     }
 
     public interface Unsafe {
-        Plugin getJavaPlugin(String id);
+        Plugin getPlugin(String id);
 
-        ScriptPlugin getPlugin(String id);
+        ScriptEngine getScript(String id);
     }
 
     public static class Listener {

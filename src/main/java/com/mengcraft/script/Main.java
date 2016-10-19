@@ -19,7 +19,7 @@ import java.util.logging.Level;
  */
 public final class Main extends JavaPlugin {
 
-    private Map<String, ScriptPlugin> plugin;
+    private Map<String, ScriptLoader.ScriptBinding> plugin;
 
     @Override
     public void onEnable() {
@@ -32,8 +32,8 @@ public final class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        for (Map.Entry<String, ScriptPlugin> i : new HashMap<>(plugin).entrySet()) {
-            i.getValue().unload();
+        for (Map.Entry<String, ScriptLoader.ScriptBinding> i : new HashMap<>(plugin).entrySet()) {
+            i.getValue().getPlugin().unload();
         }
         plugin = null;
     }
@@ -58,18 +58,21 @@ public final class Main extends JavaPlugin {
     protected void load(File file) throws ScriptPluginException {
         Preconditions.checkArgument(file.isFile());
         Preconditions.checkArgument(!isLoad(file));
-        ScriptPlugin loaded = ScriptLoader.load(this, file);
+
+        ScriptLoader.ScriptBinding binding = ScriptLoader.load(this, file);
+        ScriptPlugin loaded = binding.getPlugin();
         String name = loaded.getDescription("name");
-        ScriptPlugin i = plugin.get(name);
+        ScriptLoader.ScriptBinding i = plugin.get(name);
         if (!nil(i)) {
-            ScriptPluginException.thr(loaded, "Name conflict with " + i);
+            ScriptPluginException.thr(loaded, "Name conflict with " + i.getPlugin());
         }
-        plugin.put(name, loaded);
+
+        plugin.put(name, binding);
     }
 
     private boolean isLoad(File file) {
         String id = "file:" + file.getName();
-        for (ScriptPlugin i : plugin.values()) {
+        for (ScriptLoader.ScriptBinding i : plugin.values()) {
             if (i.toString().equals(id)) return true;
         }
         return false;
@@ -87,7 +90,7 @@ public final class Main extends JavaPlugin {
         return plugin.remove(i.getDescription("name"), i);
     }
 
-    public ScriptPlugin getPlugin(String id) {
+    public ScriptLoader.ScriptBinding getScript(String id) {
         return plugin.get(id);
     }
 

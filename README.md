@@ -2,7 +2,7 @@
 Load script in bukkit server. 
 
 ## 示例
-一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性。
+一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性（非必须）。
 对象中的`handle`字段定义了脚本监听的事件。
 ```JS
 var description = {
@@ -29,10 +29,8 @@ var description = {
 }
 
 var listener = plugin.addListener("playerjoinevent", function(event) {...})
-...
 
 listener.remove()
-
 ```
 
 对于第三方插件中的事件，需要先注册到脚本插件中才能使用。
@@ -48,8 +46,6 @@ plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 ### 服务
 加载服务是可能的，并且比Java插件中的做法更为简单。你无法在脚本中提供一个服务。
 ```JS
-...
-
 var economy = plugin.getService("Economy")
 var p = plugin.getPlayer("him")
 if (economy && p) {
@@ -62,13 +58,11 @@ if (economy && p) {
 ```
 
 ### 任务调度
-尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。请注意，卸载脚本将移除脚本所定义的监听器和未完成的任务。
+尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
 ```JS
-var task = plugin.schedule(function() plugin.unload(), 6000)
-...
+var task = plugin.schedule(function() {...}, 6000)
 
 task.cancel()
-
 ```
 
 或者调度一个在下tick执行，并且每1800tick循环执行的任务。
@@ -87,6 +81,27 @@ plugin.schedule(function() {...}, true)
 plugin.schedule(function() {...}, 1, true)
 plugin.schedule(function() {...}, 1, 1800, true)
 
+```
+
+### 卸载
+脚本卸载时将移除所有的事件监听和未完成的任务，请谨慎操作。
+```JS
+plugin.unload();
+```
+
+同时，如果你定义了卸载钩子，卸载钩子将在脚本卸载完成时被执行。此时无法执行大部分接口调用。
+```
+plugin.setUnloadHook(function() {...})
+plugin.setUnloadHook(null)
+```
+
+### 交互
+与其他脚本或者插件进行交互是不安全的，但你仍可以在必要时这么做。使用时请注意脚本加载顺序。
+```
+var p = plugin.unsafe.getPlugin("PlayerPoints").getApi()
+p.give(plugin.getPlayer("Him"), 100)
+
+plugin.unsafe.getScript("other_script").plugin.unload()
 ```
 
 ### 注意
