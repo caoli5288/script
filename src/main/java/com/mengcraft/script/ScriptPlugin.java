@@ -63,13 +63,20 @@ public final class ScriptPlugin {
 
     public void unload() {
         if (isLoaded()) {
+            task.forEach((i) -> i.cancel());
+            listener.forEach((i) -> i.remove());
             main.unload(this);
             main = null;
-            if (!nil(unloadHook)) unloadHook.run();
-            task.forEach(HandledTask::cancel);
-            listener.forEach(HandledListener::remove);
             task = null;
             listener = null;
+            if (!nil(unloadHook)) {
+                try {
+                    unloadHook.run();
+                } catch (Exception e) {
+                    logger.log(Level.WARNING, "Error while script unload", e);
+                }
+                unloadHook = null;
+            }
         }
     }
 
