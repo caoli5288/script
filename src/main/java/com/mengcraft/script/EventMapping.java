@@ -7,6 +7,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import static com.mengcraft.script.Main.nil;
 /**
  * Created on 16-10-17.
  */
-public class EventMapping {
+public final class EventMapping {
 
     private final Map<String, Mapping> mapping = new HashMap<>();
 
@@ -32,6 +33,10 @@ public class EventMapping {
         private Mapping(Class<?> clz) {
             this.clz = clz;
             name = clz.getSimpleName().toLowerCase();
+        }
+
+        public boolean isEvent(Event event) {
+            return clz.isInstance(event);
         }
 
         public String getName() {
@@ -96,16 +101,26 @@ public class EventMapping {
         }
     }
 
-    private boolean valid(Class<?> clz) {
+    private static boolean valid(Class<?> clz) {
         return Event.class.isAssignableFrom(clz) && Modifier.isPublic(clz.getModifiers()) && !Modifier.isAbstract(clz.getModifiers());
     }
 
     protected static HandlerList getHandler(Mapping mapping) {
+        return getHandler(mapping.clz);
+    }
+
+    private static HandlerList getHandler(Class<?> clz) {
         try {
-            Method e = mapping.clz.getDeclaredMethod("getHandlerList");
+            Method e = clz.getDeclaredMethod("getHandlerList");
             e.setAccessible(true);
             return (HandlerList) e.invoke(null);
-        } catch (Exception e) {
+        } catch (NoSuchMethodException e) {
+            Class<?> father = clz.getSuperclass();
+            if (valid(father)) {
+                return getHandler(father);
+            }
+            throw new RuntimeException(e.toString());
+        } catch (InvocationTargetException | IllegalAccessException e) {
             throw new RuntimeException(e.toString());
         }
     }
