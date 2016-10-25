@@ -2,3 +2,11 @@ name: Script
 main: com.mengcraft.script.Main
 version: ${project.version}
 author: caoli5288
+
+commands:
+  script:
+    permission: script.admin
+
+permissions:
+  script.admin:
+    default: false

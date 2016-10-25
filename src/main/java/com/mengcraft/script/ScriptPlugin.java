@@ -64,7 +64,7 @@ public final class ScriptPlugin {
         return !nil(main);
     }
 
-    public void unload() {
+    public boolean unload() {
         if (isLoaded()) {
             task.forEach((i) -> i.cancel());
             listener.forEach((i) -> i.remove());
@@ -80,7 +80,9 @@ public final class ScriptPlugin {
                 }
                 unloadHook = null;
             }
+            return true;
         }
+        return false;
     }
 
     public Unsafe getUnsafe() {

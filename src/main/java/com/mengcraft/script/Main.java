@@ -1,6 +1,7 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -56,8 +57,8 @@ public final class Main extends JavaPlugin {
     }
 
     protected void load(File file) throws ScriptPluginException {
-        Preconditions.checkArgument(file.isFile());
-        Preconditions.checkArgument(!isLoad(file));
+        Preconditions.checkArgument(file.isFile(), "file not exist");
+        Preconditions.checkArgument(!isLoaded(file), "file is loaded");
 
         ScriptLoader.ScriptBinding binding = ScriptLoader.load(this, file);
         ScriptPlugin loaded = binding.getPlugin();
@@ -70,12 +71,16 @@ public final class Main extends JavaPlugin {
         plugin.put(name, binding);
     }
 
-    private boolean isLoad(File file) {
+    private boolean isLoaded(File file) {
         String id = "file:" + file.getName();
         for (ScriptLoader.ScriptBinding i : plugin.values()) {
             if (i.toString().equals(id)) return true;
         }
         return false;
+    }
+
+    public ImmutableList<String> list() {
+        return ImmutableList.copyOf(plugin.keySet());
     }
 
     public int execute(Runnable runnable, int delay, int repeat) {
@@ -88,6 +93,14 @@ public final class Main extends JavaPlugin {
 
     protected boolean unload(ScriptPlugin i) {
         return plugin.remove(i.getDescription("name"), i);
+    }
+
+    protected boolean unload(String id) {
+        ScriptLoader.ScriptBinding binding = plugin.get(id);
+        if (!nil(binding)) {
+            return binding.getPlugin().unload();
+        }
+        return false;
     }
 
     public ScriptLoader.ScriptBinding getScript(String id) {
