@@ -111,6 +111,11 @@ public final class ScriptPlugin {
         return main.getServer().getServicesManager().load(i);
     }
 
+    public void runCommand(String str) {
+        logger.info("Run console command " + str);
+        main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
+    }
+
     public HandledTask schedule(Runnable runnable, int delay, int period, boolean b) {
         Preconditions.checkState(isLoaded(), "unloaded");
         HandledTask i = new HandledTask(this);

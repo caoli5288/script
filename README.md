@@ -80,7 +80,11 @@ plugin.schedule(function() plugin.logger.info("hello, world"))
 plugin.schedule(function() {...}, true)
 plugin.schedule(function() {...}, 1, true)
 plugin.schedule(function() {...}, 1, 1800, true)
+```
 
+### 后台指令
+```JS
+plugin.runCommand("kill him");
 ```
 
 ### 卸载
