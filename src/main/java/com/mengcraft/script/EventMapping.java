@@ -6,14 +6,17 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
-import java.lang.reflect.Field;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 
 import static com.mengcraft.script.Main.nil;
 
@@ -64,30 +67,41 @@ public final class EventMapping {
     }
 
     public void init(Plugin plugin) {
-        init(plugin.getClass().getClassLoader());
+        Class<?> clz = plugin.getClass();
+        URL path = clz.getProtectionDomain().getCodeSource().getLocation();
+        init(clz.getClassLoader(), path, "(.*)\\.class");
     }
 
-    @SuppressWarnings("unchecked")
-    public void init(ClassLoader loader) {
+    protected void init() {
+        URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
+        init(Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
+        Main.instance.getLogger().info("Initialized " + mapping.size() + " build-in object");
+    }
+
+    private void init(ClassLoader loader, URL path, String regex) {
+        Preconditions.checkArgument(path.getProtocol().equals("file"));
+        Pattern pattern = Pattern.compile(regex);
         try {
-            Field field = ClassLoader.class.getDeclaredField("classes");
-            field.setAccessible(true);
-            List<Class<?>> list = (List) field.get(loader);
-            for (Class<?> clz : list) {
-                if (valid(clz)) {
-                    try {
-                        init(clz);
-                    } catch (Exception e) {
-                        Bukkit.getLogger().log(Level.WARNING, "[Script] " + e.getMessage());
-                    }
-                }
+            JarFile ball = new JarFile(path.getFile());
+            Enumeration<JarEntry> all = ball.entries();
+            while (all.hasMoreElements()) {
+                JarEntry element = all.nextElement();
+                if (pattern.matcher(element.getName()).matches()) init(loader, element);
             }
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e.toString());
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage());
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private void init(ClassLoader loader, JarEntry element) {
+        try {
+            String i = element.getName().replace('/', '.');
+            Class<?> clz = loader.loadClass(i.substring(0, i.length() - 6));
+            if (valid(clz)) init(clz);
+        } catch (NoClassDefFoundError | ClassNotFoundException i) {
+        }
+    }
+
     public void init(String plugin) {
         init(Bukkit.getPluginManager().getPlugin(plugin));
     }
@@ -95,9 +109,8 @@ public final class EventMapping {
     public void init(Class<?> clz) {
         Preconditions.checkArgument(valid(clz), clz.getName() + " not valid");
         String name = clz.getSimpleName().toLowerCase();
-        if (!mapping.containsKey(name)) {
+        if (mapping.get(name) == null) {
             mapping.put(name, new Mapping(clz));
-            Bukkit.getLogger().log(Level.INFO, "[Script] Initialized " + clz.getSimpleName());
         }
     }
 

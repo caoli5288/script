@@ -20,12 +20,15 @@ import java.util.logging.Level;
 public final class Main extends JavaPlugin {
 
     private Map<String, ScriptLoader.ScriptBinding> plugin;
+    protected static JavaPlugin instance;
 
     @Override
     public void onEnable() {
+        instance = this;
+
         saveDefaultConfig();
 
-        EventMapping.INSTANCE.init(getServer().getClass().getClassLoader());// Register build-in event
+        EventMapping.INSTANCE.init();// Register build-in event
 
         load();
     }
