@@ -36,7 +36,7 @@ public final class EventMapping {
         }
 
         public boolean isEvent(Event event) {
-            return clz.isInstance(event);
+            return event.getClass() == clz;
         }
 
         public String getName() {

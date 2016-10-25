@@ -18,7 +18,7 @@ public class MainTest {
 
     @Test
     public void loadAndEval() {
-        File file = new File("src/main/resources/sample.js");
+        File file = new File("src/main/resources/hello.js");
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
         try {
             engine.eval(new FileReader(file));
