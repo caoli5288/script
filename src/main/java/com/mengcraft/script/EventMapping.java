@@ -60,9 +60,7 @@ public final class EventMapping {
 
     public EventListener getListener(String name) {
         String id = name.toLowerCase();
-        if (!mapping.containsKey(id)) {
-            throw new IllegalArgumentException("Not initialized");
-        }
+        Preconditions.checkState(mapping.containsKey(id));
         return mapping.get(id).getListener();
     }
 

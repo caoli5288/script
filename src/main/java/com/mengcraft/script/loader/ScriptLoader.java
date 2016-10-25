@@ -45,8 +45,8 @@ public class ScriptLoader {
                 if (nil(plugin.getDescription("name"))) {
                     plugin.setDescription("name", id);
                 }
+                loadListener(plugin, engine);
                 main.getLogger().info(load(plugin));
-                main.getLogger().info(loadListener(plugin, engine));
             } else {
                 main.getLogger().info("Load script " + id);
             }
@@ -57,7 +57,7 @@ public class ScriptLoader {
     }
 
     private static String load(ScriptPlugin plugin) {
-        StringBuilder b = new StringBuilder("Load script ");
+        StringBuilder b = new StringBuilder("Loaded script ");
         b.append(plugin.getDescription("name"));
         Object version = plugin.getDescription("version");
         if (!nil(version)) {
@@ -72,18 +72,14 @@ public class ScriptLoader {
         return b.toString();
     }
 
-    private static String loadListener(ScriptPlugin plugin, ScriptEngine engine) {
+    private static void loadListener(ScriptPlugin plugin, ScriptEngine engine) {
         String handle = plugin.getDescription("handle");
         if (!nil(handle) && EventMapping.INSTANCE.initialized(handle)) {
             ScriptListener listener = getInterface(engine, ScriptListener.class);
-            if (nil(listener)) {
-                return "Error while try to handle " + handle;
-            } else {
+            if (!nil(listener)) {
                 plugin.addListener(handle, listener);
             }
-            return "Handled event " + handle;
         }
-        return "No handle declare in description";
     }
 
     private static <T> T getInterface(ScriptEngine engine, Class<T> i) {
