@@ -73,7 +73,7 @@ public final class EventMapping {
     protected void init() {
         URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
         init(Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
-        Main.instance.getLogger().info("Initialized " + mapping.size() + " build-in object");
+        Bukkit.getLogger().info("[Script] Initialized " + mapping.size() + " build-in object");
     }
 
     private void init(ClassLoader loader, URL path, String regex) {
