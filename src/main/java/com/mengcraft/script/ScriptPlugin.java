@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -194,6 +195,12 @@ public final class ScriptPlugin {
 
     public void setUnloadHook(Runnable unloadHook) {
         this.unloadHook = unloadHook;
+    }
+
+    public void broadcast(String... in) {
+        for (String i : in) {
+            main.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', i));
+        }
     }
 
     public Logger getLogger() {
