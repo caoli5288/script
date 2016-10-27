@@ -36,6 +36,7 @@ public final class ScriptPlugin {
         }
     };
 
+    private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
     private List<HandledTask> task = new LinkedList<>();
 
@@ -67,8 +68,9 @@ public final class ScriptPlugin {
 
     public boolean unload() {
         if (isLoaded()) {
-            task.forEach((i) -> i.cancel());
-            listener.forEach((i) -> i.remove());
+            executor.forEach(i -> i.remove());
+            task.forEach(i -> i.cancel());
+            listener.forEach(i -> i.remove());
             main.unload(this);
             main = null;
             task = null;
@@ -160,6 +162,14 @@ public final class ScriptPlugin {
         };
     }
 
+    protected boolean remove(HandledExecutor i) {
+        return executor.remove(i) && main.remove(i);
+    }
+
+    protected boolean remove(HandledListener i) {
+        return listener.remove(i);
+    }
+
     protected boolean cancel(HandledTask i) {
         boolean b = task.remove(i);
         if (b) {
@@ -169,10 +179,6 @@ public final class ScriptPlugin {
         return b;
     }
 
-    protected boolean cancel(HandledListener i) {
-        return listener.remove(i);
-    }
-
     public HandledListener addListener(String event, ScriptListener i) {
         return addListener(event, i, -1);
     }
@@ -180,13 +186,17 @@ public final class ScriptPlugin {
     public HandledListener addListener(String event, ScriptListener i, int priority) {
         Preconditions.checkState(isLoaded(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(event);
-        HandledListener add = handle.add(main, new Listener(this, i, priority));
+        HandledListener add = handle.add(main, this, new Listener(i, priority));
         listener.add(add);
         return add;
     }
 
-    public HandledExecutor addExecutor(String label, String permission, ScriptExecutor executor) {
-        throw new UnsupportedOperationException();
+    public HandledExecutor addExecutor(String label, String permission, ScriptExecutor i) {
+        Preconditions.checkArgument(!label.equals("script"));
+        HandledExecutor handled = new HandledExecutor(this, new Executor(label, permission, i));
+        main.addExecutor(handled);
+        executor.add(handled);
+        return handled;
     }
 
     public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
@@ -235,19 +245,37 @@ public final class ScriptPlugin {
         ScriptEngine getScript(String id);
     }
 
+    public static class Executor {
+        private final String permission;
+        private final String label;
+        private final ScriptExecutor executor;
+
+        public Executor(String label, String permission, ScriptExecutor executor) {
+            this.label = label;
+            this.permission = permission;
+            this.executor = executor;
+        }
+
+        public String getPermission() {
+            return permission;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public ScriptExecutor getExecutor() {
+            return executor;
+        }
+    }
+
     public static class Listener {
-        private final ScriptPlugin plugin;
         private final ScriptListener listener;
         private final int priority;
 
-        private Listener(ScriptPlugin plugin, ScriptListener listener, int priority) {
-            this.plugin = plugin;
+        private Listener(ScriptListener listener, int priority) {
             this.listener = listener;
             this.priority = priority;
-        }
-
-        public ScriptPlugin getPlugin() {
-            return plugin;
         }
 
         public int getPriority() {

@@ -10,15 +10,15 @@ public class HandledListener implements Comparable<HandledListener> {
     private final int priority;
     private final ScriptPlugin plugin;
 
-    public HandledListener(EventListener up, ScriptPlugin.Listener listener) {
+    public HandledListener(EventListener up, ScriptPlugin plugin, ScriptPlugin.Listener i) {
         this.up = up;
-        this.listener = listener.getListener();
-        priority = listener.getPriority();
-        plugin = listener.getPlugin();
+        this.plugin = plugin;
+        listener = i.getListener();
+        priority = i.getPriority();
     }
 
     public boolean remove() {
-        return plugin.cancel(this) && up.remove(this);
+        return plugin.remove(this) && up.remove(this);
     }
 
     public ScriptPlugin getPlugin() {

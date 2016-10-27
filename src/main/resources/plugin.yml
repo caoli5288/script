@@ -2,11 +2,8 @@ name: Script
 main: com.mengcraft.script.Main
 version: ${project.version}
 author: caoli5288
+website: http://github.com/caoli5288/script/
 
 commands:
   script:
-    permission: script.admin
-
-permissions:
-  script.admin:
-    default: false
+    description: JavaScript plugin loader. http://github.com/caoli5288/script/

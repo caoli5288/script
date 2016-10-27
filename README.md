@@ -1,5 +1,5 @@
 # Script
-Load script in bukkit server. 
+Load JavaScript plugin in bukkit server. 
 
 ## 示例
 一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性（非必须）。
@@ -41,6 +41,24 @@ plugin.mapping.init("AnyPlugin")
 如果类加载器未把事件类加载到内存中，可能需要使用类加载器加载。
 ```JS
 plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
+```
+### 指令
+你可以添加一个或者多个指令。你可以在游戏中使用`/echo`或者`/script:echo`执行下列添加的指令。
+```JS
+plugin.addExecutor("echo", function(sender, i) {
+    sender.sendMessage(i.toString())
+})
+```
+
+可以直接指定执行指令所需的权限。
+```JS
+plugin.addExecutor("echo", "echo.use", function(sender, i) {...})
+```
+
+理所当然的，添加的指令随时可以撤销。
+```JS
+var exec = plugin.addExecutor(...)
+exec.remove()
 ```
 
 ### 服务
@@ -96,12 +114,12 @@ plugin.runCommand("kill him");
 ```
 
 ### 卸载
-脚本卸载时将移除所有的事件监听和未完成的任务，请谨慎操作。
+脚本卸载时将移除所有的事件监听、指令和未完成的任务，请谨慎操作。
 ```JS
 plugin.unload();
 ```
 
-同时，如果你定义了卸载钩子，卸载钩子将在脚本卸载完成时被执行。此时无法执行大部分接口调用。
+如果你定义了卸载钩子，卸载钩子将在脚本卸载完成时被执行。钩子中无法执行大部分`plugin`接口调用。
 ```
 plugin.setUnloadHook(function() {...})
 plugin.setUnloadHook(null)
@@ -115,6 +133,18 @@ p.give(plugin.getPlayer("Him"), 100)
 
 plugin.unsafe.getScript("other_script").plugin.unload()
 ```
+
+### 插件指令
+执行下列权限需要`script.admin`权限。
+- /script list
+    - 列出所有已加载的脚本名。
+- /script load <文件名>
+    - 加载指定文件名的脚本。文件名以插件数据目录为相对目录。
+- /script unload <脚本名|file:文件名>
+    - 卸载指定名的脚本。脚本名如未在`description`字段定义则为`file:文件名`。
+    - 亦可直接使用`file:文件名`。
+- /script reload
+    - 所有已加载的脚本将被卸载，然后加载所有定义在配置中`script`列的脚本。
 
 ### 注意
 脚本可以正确调用`Java`中的重载方法，但是脚本本身无法定义重载函数，请务必注意这一点。
