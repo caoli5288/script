@@ -21,12 +21,7 @@ public final class ArrayHelper {
         try {
             engine.eval("" +
                     "function toScriptArray(input) {\n" +
-                    "    var i = input.length;\n" +
-                    "    var out = [];\n" +
-                    "    while(i--) {\n" +
-                    "        out[i] = input[i];\n" +
-                    "    }\n" +
-                    "    return out;\n" +
+                    "    return Array.prototype.slice.call(input);\n" +
                     "}");
         } catch (ScriptException e) {
             e.printStackTrace();
