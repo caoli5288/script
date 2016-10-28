@@ -9,6 +9,6 @@ import java.util.List;
  */
 public interface ScriptExecutor {
 
-    void execute(CommandSender sender, List<String> list);
+    void execute(CommandSender sender, Object input);
 
 }

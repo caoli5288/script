@@ -43,10 +43,11 @@ plugin.mapping.init("AnyPlugin")
 plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 ```
 ### 指令
-你可以添加一个或者多个指令。你可以在游戏中使用`/echo`或者`/script:echo`执行下列添加的指令。
+你可以添加一个或者多个指令。以下是添加`/echo`和`/script:echo`指令的示例代码。
+函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
 ```JS
 plugin.addExecutor("echo", function(sender, i) {
-    sender.sendMessage(i.toString())
+    if (Array.isArray(i)) sender.sendMessage(i.join(" "))
 })
 ```
 

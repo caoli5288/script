@@ -24,9 +24,9 @@ public class HandledExecutor {
         permission = i.getPermission();
     }
 
-    public boolean execute(CommandSender sender, List<String> list) {
+    public boolean execute(CommandSender sender, Object input) {
         if (nil(permission) || sender.hasPermission(permission)) {
-            executor.execute(sender, list);
+            executor.execute(sender, input);
             return true;
         } else {
             sender.sendMessage(ChatColor.RED + "你没有执行权限");

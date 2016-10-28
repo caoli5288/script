@@ -1,6 +1,7 @@
 package com.mengcraft.script;
 
 import com.mengcraft.script.loader.ScriptPluginException;
+import com.mengcraft.script.util.ArrayHelper;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -39,7 +40,7 @@ public class MainCommand implements CommandExecutor {
             if (nil(handled)) {
                 throw new IllegalStateException("喵");
             }
-            return handled.execute(who, Arrays.asList(j));
+            return handled.execute(who, ArrayHelper.toScriptArray(j));
         }
         return false;
     }
