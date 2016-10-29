@@ -33,9 +33,9 @@ public final class EventMapping {
 
         private EventListener listener;
 
-        private Mapping(Class<?> clz) {
+        private Mapping(String name, Class<?> clz) {
             this.clz = clz;
-            name = clz.getSimpleName().toLowerCase();
+            this.name = name;
         }
 
         public boolean valid(Event event) {
@@ -64,21 +64,21 @@ public final class EventMapping {
         return mapping.get(id).getListener();
     }
 
-    public void init(Plugin plugin) {
+    public int init(Plugin plugin) {
         Class<?> clz = plugin.getClass();
         URL path = clz.getProtectionDomain().getCodeSource().getLocation();
-        init(clz.getClassLoader(), path, "(.*)\\.class");
+        return init(clz.getClassLoader(), path, "(.*)\\.class");
     }
 
-    protected void init() {
+    protected int init() {
         URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
-        init(Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
-        Bukkit.getLogger().info("[Script] Initialized " + mapping.size() + " build-in object");
+        return init(Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
     }
 
-    private void init(ClassLoader loader, URL path, String regex) {
+    private int init(ClassLoader loader, URL path, String regex) {
         Preconditions.checkArgument(path.getProtocol().equals("file"));
         Pattern pattern = Pattern.compile(regex);
+        int i = mapping.size();
         try {
             JarFile ball = new JarFile(path.getFile());
             Enumeration<JarEntry> all = ball.entries();
@@ -89,6 +89,7 @@ public final class EventMapping {
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage());
         }
+        return mapping.size() - i;
     }
 
     private void init(ClassLoader loader, JarEntry element) {
@@ -100,15 +101,15 @@ public final class EventMapping {
         }
     }
 
-    public void init(String plugin) {
-        init(Bukkit.getPluginManager().getPlugin(plugin));
+    public int init(String plugin) {
+        return init(Bukkit.getPluginManager().getPlugin(plugin));
     }
 
     public void init(Class<?> clz) {
         Preconditions.checkArgument(valid(clz), clz.getName() + " not valid");
         String name = clz.getSimpleName().toLowerCase();
         if (mapping.get(name) == null) {
-            mapping.put(name, new Mapping(clz));
+            mapping.put(name, new Mapping(name, clz));
         }
     }
 

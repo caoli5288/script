@@ -35,7 +35,8 @@ public final class Main extends JavaPlugin {
 
         saveDefaultConfig();
 
-        EventMapping.INSTANCE.init();// Register build-in event
+        int init = EventMapping.INSTANCE.init();// Register build-in event
+        getLogger().info("Initialized " + init + " build-in object");
 
         load();
 
@@ -89,14 +90,6 @@ public final class Main extends JavaPlugin {
 
     public ImmutableList<String> list() {
         return ImmutableList.copyOf(plugin.keySet());
-    }
-
-    public int execute(Runnable runnable, int delay, int repeat) {
-        return getServer().getScheduler().runTaskTimerAsynchronously(this, runnable, delay, repeat).getTaskId();
-    }
-
-    public int process(Runnable runnable, int delay, int repeat) {
-        return getServer().getScheduler().runTaskTimer(this, runnable, delay, repeat).getTaskId();
     }
 
     @SuppressWarnings("unchecked")

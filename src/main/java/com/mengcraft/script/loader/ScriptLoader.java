@@ -36,22 +36,22 @@ public class ScriptLoader {
     public static ScriptBinding load(Main main, String id, Reader reader) throws ScriptPluginException {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
         ScriptPlugin plugin = new ScriptPlugin(main, id);
+        engine.put("plugin", plugin);
         try {
-            engine.put("plugin", plugin);
             engine.eval(reader);
-            Object description = engine.get("description");
-            if (Map.class.isInstance(description)) {
-                plugin.setDescription((Map) description);
-                if (nil(plugin.getDescription("name"))) {
-                    plugin.setDescription("name", id);
-                }
-                loadListener(plugin, engine);
-                main.getLogger().info(load(plugin));
-            } else {
-                main.getLogger().info("Load script " + id);
-            }
         } catch (ScriptException e) {
             ScriptPluginException.thr(plugin, e.getMessage());
+        }
+        Object description = engine.get("description");
+        if (Map.class.isInstance(description)) {
+            plugin.setDescription((Map) description);
+            if (nil(plugin.getDescription("name"))) {
+                plugin.setDescription("name", id);
+            }
+            loadListener(plugin, engine);
+            main.getLogger().info(load(plugin));
+        } else {
+            main.getLogger().info("Load script " + id);
         }
         return ScriptBinding.bind(plugin, engine);
     }
@@ -109,7 +109,7 @@ public class ScriptLoader {
             return plugin.toString();
         }
 
-        public static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {
+        private static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {
             return new ScriptBinding(plugin, engine);
         }
 

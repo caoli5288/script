@@ -7,6 +7,8 @@ import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.scheduler.BukkitTask;
 
 import javax.script.ScriptEngine;
 import java.util.ArrayList;
@@ -121,14 +123,23 @@ public final class ScriptPlugin {
         main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
     }
 
-    public HandledTask schedule(Runnable runnable, int delay, int period, boolean b) {
+    public HandledTask schedule(Runnable run, int delay, int period, boolean b) {
         Preconditions.checkState(isLoaded(), "unloaded");
-        HandledTask i = new HandledTask(this);
-        // may the only way remove one-shot task
-        Runnable r = period < 0 ? () -> callback(i, runnable) : runnable;
-        i.setId(b ? main.execute(r, delay, period) : main.process(r, delay, period));
-        task.add(i);
-        return i;
+        BukkitScheduler scheduler = main.getServer().getScheduler();
+        HandledTask handled = new HandledTask(this);
+        BukkitTask i;
+        if (b) {
+            i = scheduler.runTaskTimerAsynchronously(main, valid(run, period, handled), delay, period);
+        } else {
+            i = scheduler.runTaskTimer(main, valid(run, period, handled), delay, period);
+        }
+        handled.setId(i.getTaskId());
+        task.add(handled);
+        return handled;
+    }
+
+    private Runnable valid(Runnable run, int period, HandledTask handled) {
+        return period > -1 ? run : cancellable(handled, run);
     }
 
     public HandledTask schedule(Runnable runnable, int delay, int period) {
@@ -144,14 +155,14 @@ public final class ScriptPlugin {
     }
 
     public HandledTask schedule(Runnable runnable, boolean b) {
-        return schedule(runnable, -1, -1, b);
+        return schedule(runnable, 0, -1, b);
     }
 
     public HandledTask schedule(Runnable runnable) {
-        return schedule(runnable, -1, -1, false);
+        return schedule(runnable, 0, -1, false);
     }
 
-    private Runnable callback(HandledTask i, Runnable runnable) {
+    private Runnable cancellable(HandledTask i, Runnable runnable) {
         return () -> {
             try {
                 runnable.run();
