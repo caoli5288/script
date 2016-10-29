@@ -33,10 +33,6 @@ public class HandledListener implements Comparable<HandledListener> {
         return priority;
     }
 
-    public boolean isHandled() {
-        return up.isHandled(this);
-    }
-
     @Override
     public int compareTo(HandledListener i) {
         return priority - i.priority;

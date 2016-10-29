@@ -6,19 +6,18 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.RegisteredListener;
 
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 
 /**
  * Created on 16-10-17.
  */
 public class EventListener implements Listener {
 
-    private final List<HandledListener> list = new LinkedList<>();
+    private final List<HandledListener> list = new ArrayList<>();
     private final HandlerList handler;
     private final EventMapping.Mapping mapping;
-    private ScriptListener[] pipe;
 
     public EventListener(EventMapping.Mapping mapping) {
         handler = EventMapping.getHandler(mapping);
@@ -26,23 +25,26 @@ public class EventListener implements Listener {
     }
 
     public void handle(Event event) {
-        if (mapping.isEvent(event)) {
-            for (ScriptListener listener : pipe) {
-                listener.handle(event);
+        if (mapping.valid(event)) {
+            int size = list.size();
+            for (int i = 0; i < size; i++) {
+                handle(list.get(i), event);
             }
         }
     }
 
-    public boolean isHandled(HandledListener listener) {
-        return list.contains(listener);
+    private void handle(HandledListener listener, Event event) {
+        try {
+            listener.getListener().handle(event);
+        } catch (Exception e) {
+            listener.getPlugin().getLogger().log(Level.SEVERE, getName(), e);
+        }
     }
 
     protected boolean remove(HandledListener listener) {
         if (list.remove(listener)) {
             if (list.isEmpty()) {
                 handler.unregister(this);
-            } else {
-                pipe = Main.collect(ScriptListener.class, list, i -> i.getListener());
             }
             return true;
         }
@@ -54,31 +56,24 @@ public class EventListener implements Listener {
         if (list.isEmpty()) {
             handler.register(new RegisteredListener(this, (i, event) ->
                     handle(event),
-                    EventPriority.NORMAL,
-                    main, false));
+                    EventPriority.NORMAL, main, false)
+            );
+            list.add(handled);
+        } else {
+            add(handled, listener.getPriority());
         }
-        add(handled, listener.getPriority());
-
-        pipe = Main.collect(ScriptListener.class, list, i -> i.getListener());
-
         return handled;
     }
 
     private void add(HandledListener handled, int priority) {
-        if (list.isEmpty()) {
-            list.add(handled);
-        } else {
-            Iterator<HandledListener> it = list.iterator();
-            int index = -1;
-            for (int i = 0; index < 0 && it.hasNext(); i++) {
-                if (priority < it.next().getPriority()) index = i;
-            }
-            if (index < 0) {
-                list.add(handled);
-            } else {
-                list.add(index, handled);
+        int size = list.size();
+        int i = 0;
+        for (; i < size; i++) {
+            if (list.get(i).getPriority() > priority) {
+                size = 0;
             }
         }
+        list.add(i, handled);
     }
 
     public String getName() {

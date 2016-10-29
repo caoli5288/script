@@ -11,13 +11,10 @@ import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.logging.Level;
 
 /**
@@ -169,16 +166,6 @@ public final class Main extends JavaPlugin {
 
     public ScriptLoader.ScriptBinding getScript(String name) {
         return plugin.get(name);
-    }
-
-    @SuppressWarnings("all")
-    public static <T, E> T[] collect(Class<T> type, List<E> in, Function<E, T> func) {
-        List<T> handle = new ArrayList<>(in.size());
-        for (E i : in) {
-            T j = func.apply(i);
-            if (!nil(j)) handle.add(j);
-        }
-        return handle.toArray((T[]) Array.newInstance(type, handle.size()));
     }
 
     public static boolean nil(Object i) {

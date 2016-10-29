@@ -38,7 +38,7 @@ public final class EventMapping {
             name = clz.getSimpleName().toLowerCase();
         }
 
-        public boolean isEvent(Event event) {
+        public boolean valid(Event event) {
             return event.getClass() == clz;
         }
 

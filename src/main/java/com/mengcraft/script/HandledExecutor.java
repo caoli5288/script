@@ -3,8 +3,6 @@ package com.mengcraft.script;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
-import java.util.List;
-
 import static com.mengcraft.script.Main.nil;
 
 /**
