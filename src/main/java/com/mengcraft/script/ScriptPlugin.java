@@ -5,6 +5,7 @@ import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import org.bukkit.ChatColor;
+import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -28,6 +29,11 @@ import static com.mengcraft.script.Main.nil;
 public final class ScriptPlugin {
 
     private final Unsafe unsafe = new Unsafe() {
+        @Override
+        public Server getServer() {
+            return main.getServer();
+        }
+
         public Plugin getPlugin(String id) {
             return main.getServer().getPluginManager().getPlugin(id);
         }
@@ -251,6 +257,8 @@ public final class ScriptPlugin {
     }
 
     public interface Unsafe {
+        Server getServer();
+
         Plugin getPlugin(String id);
 
         ScriptEngine getScript(String id);
