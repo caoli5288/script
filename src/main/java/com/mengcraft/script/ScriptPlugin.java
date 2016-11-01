@@ -29,7 +29,6 @@ import static com.mengcraft.script.Main.nil;
 public final class ScriptPlugin {
 
     private final Unsafe unsafe = new Unsafe() {
-        @Override
         public Server getServer() {
             return main.getServer();
         }

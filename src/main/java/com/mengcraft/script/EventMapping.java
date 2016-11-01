@@ -13,7 +13,9 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -26,6 +28,7 @@ import static com.mengcraft.script.Main.nil;
 public final class EventMapping {
 
     private final Map<String, Mapping> mapping = new HashMap<>();
+    private final Set<Plugin> list = new HashSet<>();
 
     public final static class Mapping {
         private final Class<?> clz;
@@ -65,9 +68,12 @@ public final class EventMapping {
     }
 
     public int init(Plugin plugin) {
-        Class<?> clz = plugin.getClass();
-        URL path = clz.getProtectionDomain().getCodeSource().getLocation();
-        return init(clz.getClassLoader(), path, "(.*)\\.class");
+        if (list.add(plugin)) {
+            Class<?> clz = plugin.getClass();
+            URL path = clz.getProtectionDomain().getCodeSource().getLocation();
+            return init(clz.getClassLoader(), path, "(.*)\\.class");
+        }
+        return 0;
     }
 
     protected int init() {
