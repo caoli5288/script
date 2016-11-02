@@ -74,13 +74,15 @@ public final class Main extends JavaPlugin {
 
         ScriptLoader.ScriptBinding binding = ScriptLoader.load(this, file);
         ScriptPlugin loaded = binding.getPlugin();
-        String name = loaded.getDescription("name");
-        ScriptLoader.ScriptBinding i = plugin.get(name);
-        if (!nil(i)) {
-            ScriptPluginException.thr(loaded, "Name conflict with " + i.getPlugin());
-        }
+        if (loaded.isLoaded()) {
+            String name = loaded.getDescription("name");
+            ScriptLoader.ScriptBinding i = plugin.get(name);
+            if (!nil(i)) {
+                ScriptPluginException.thr(loaded, "Name conflict with " + i.getPlugin());
+            }
 
-        plugin.put(name, binding);
+            plugin.put(name, binding);
+        }
     }
 
     private boolean isLoaded(File file) {
