@@ -74,7 +74,7 @@ public final class Main extends JavaPlugin {
 
         ScriptLoader.ScriptBinding binding = ScriptLoader.load(this, file);
         ScriptPlugin loaded = binding.getPlugin();
-        if (loaded.isLoaded()) {
+        if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
             ScriptLoader.ScriptBinding i = plugin.get(name);
             if (!nil(i)) {
@@ -140,6 +140,7 @@ public final class Main extends JavaPlugin {
 
     protected boolean unload(ScriptPlugin i) {
         String id = i.getDescription("name");
+        if (nil(id)) return false;
         ScriptLoader.ScriptBinding binding = plugin.get(id);
         return !nil(binding) && binding.getPlugin() == i && plugin.remove(id, binding);
     }

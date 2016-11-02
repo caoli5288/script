@@ -71,17 +71,23 @@ public final class ScriptPlugin {
         return description.get(key);
     }
 
-    public boolean isLoaded() {
+    public boolean isIdled() {
+        Preconditions.checkState(isHandled(), "unloaded");
+        return executor.isEmpty() && listener.isEmpty() && task.isEmpty();
+    }
+
+    public boolean isHandled() {
         return !nil(main);
     }
 
     public boolean unload() {
-        if (isLoaded()) {
+        if (isHandled()) {
             executor.forEach(i -> i.remove());
             task.forEach(i -> i.cancel());
             listener.forEach(i -> i.remove());
             main.unload(this);
             main = null;
+            executor = null;
             task = null;
             listener = null;
             if (!nil(unloadHook)) {
@@ -142,7 +148,7 @@ public final class ScriptPlugin {
     }
 
     public HandledTask schedule(Runnable run, int delay, int period, boolean b) {
-        Preconditions.checkState(isLoaded(), "unloaded");
+        Preconditions.checkState(isHandled(), "unloaded");
         BukkitScheduler scheduler = main.getServer().getScheduler();
         HandledTask handled = new HandledTask(this);
         BukkitTask i;
@@ -213,7 +219,7 @@ public final class ScriptPlugin {
     }
 
     public HandledListener addListener(String event, ScriptListener i, int priority) {
-        Preconditions.checkState(isLoaded(), "unloaded");
+        Preconditions.checkState(isHandled(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(event);
         HandledListener add = handle.add(main, this, new Listener(i, priority));
         listener.add(add);
@@ -247,19 +253,19 @@ public final class ScriptPlugin {
     }
 
     public EventMapping getMapping() {
-        Preconditions.checkState(isLoaded(), "unloaded");
+        Preconditions.checkState(isHandled(), "unloaded");
         return EventMapping.INSTANCE;
     }
 
     public void setDescription(Map<String, Object> in) {
-        Preconditions.checkState(isLoaded(), "unloaded");
+        Preconditions.checkState(isHandled(), "unloaded");
         in.forEach((i, value) -> {
             description.put(i, value.toString());
         });
     }
 
     public void setDescription(String key, String value) {
-        Preconditions.checkState(isLoaded(), "unloaded");
+        Preconditions.checkState(isHandled(), "unloaded");
         description.put(key, value);
     }
 
