@@ -1,9 +1,12 @@
 package com.mengcraft.script.util;
 
+import com.google.common.collect.ImmutableList;
+
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -42,7 +45,16 @@ public final class ArrayHelper {
         return list;
     }
 
-    public static Object toScriptArray(Object input) {
+    public static Object toScriptArray(Iterator<String> input) {
+        ImmutableList.Builder<String> b = ImmutableList.builder();
+        input.forEachRemaining(b::add);
+        ImmutableList<String> list = b.build();
+        int l = list.size();
+        String[] out = new String[l];
+        return toScriptArray(list.toArray(out));
+    }
+
+    public static Object toScriptArray(String[] input) {
         return helper.toScriptArray(input);
     }
 

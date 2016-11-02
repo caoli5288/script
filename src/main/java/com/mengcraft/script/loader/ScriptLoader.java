@@ -4,14 +4,12 @@ import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Main;
 import com.mengcraft.script.ScriptListener;
 import com.mengcraft.script.ScriptPlugin;
+import org.bukkit.command.CommandSender;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.Reader;
 import java.util.Map;
 
@@ -22,23 +20,21 @@ import static com.mengcraft.script.Main.nil;
  */
 public class ScriptLoader {
 
-    public static ScriptBinding load(Main main, File file) throws ScriptPluginException {
-        FileReader reader = null;
-        try {
-            reader = new FileReader(file);
-        } catch (FileNotFoundException e) {
-            ScriptPluginException.thr(null, e.getMessage());
-        }
-        return load(main, "file:" + file.getName(), reader);
+    private final Main main;
+
+    public ScriptLoader(Main main) {
+        this.main = main;
     }
 
     @SuppressWarnings("unchecked")
-    public static ScriptBinding load(Main main, String id, Reader reader) throws ScriptPluginException {
+    public ScriptBinding load(ScriptInfo info) throws ScriptPluginException {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-        ScriptPlugin plugin = new ScriptPlugin(main, id);
+        ScriptPlugin plugin = new ScriptPlugin(main, info.id);
         engine.put("plugin", plugin);
+        engine.put("argument", info.argument);
+        engine.put("loader", info.loader);
         try {
-            engine.eval(reader);
+            engine.eval(info.contend);
         } catch (ScriptException e) {
             ScriptPluginException.thr(plugin, e.getMessage());
         }
@@ -46,12 +42,12 @@ public class ScriptLoader {
         if (Map.class.isInstance(description)) {
             plugin.setDescription((Map) description);
             if (nil(plugin.getDescription("name"))) {
-                plugin.setDescription("name", id);
+                plugin.setDescription("name", info.id);
             }
             loadListener(plugin, engine);
             main.getLogger().info(load(plugin));
         } else {
-            main.getLogger().info("Load script " + id);
+            main.getLogger().info("Load script " + info.id);
         }
         return ScriptBinding.bind(plugin, engine);
     }
@@ -84,6 +80,35 @@ public class ScriptLoader {
 
     private static <T> T getInterface(ScriptEngine engine, Class<T> i) {
         return Invocable.class.cast(engine).getInterface(i);
+    }
+
+    public final static class ScriptInfo {
+
+        private CommandSender loader;
+        private String id;
+        private Reader contend;
+        private Object argument;
+
+        public ScriptInfo setLoader(CommandSender loader) {
+            this.loader = loader;
+            return this;
+        }
+
+        public ScriptInfo setId(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public ScriptInfo setContend(Reader contend) {
+            this.contend = contend;
+            return this;
+        }
+
+        public ScriptInfo setArgument(Object argument) {
+            this.argument = argument;
+            return this;
+        }
+
     }
 
     public final static class ScriptBinding {

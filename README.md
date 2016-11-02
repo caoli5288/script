@@ -11,12 +11,24 @@ var description = {
     "handle":"playerjoinevent"
 }
 
-var handle = function(event) {
+var handle = function handle(event) {
     var p = event.player
     p.sendMessage("hello, " + p.name)
 }
 
 ```
+
+### 加载
+将脚本文件名添加到`config.yml`中的`script`列后，脚本将在插件加载时随之加载。否则，请使用指令`/script load <脚本文件名>`加载脚本。脚本文件名后的参数将被以作为全局变量`argument`传入脚本中。任何自动加载的脚本`argument`为未定义。
+```JS
+if (argument) {
+    argument.forEach(function (arg) {
+        loader.sendMessage(arg);
+    });
+}
+```
+
+上例子中的`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
 
 ### 单次脚本
 如果脚本没有添加指令、事件监听和人物调度的行为，那么该脚本为单次脚本。单次脚本执行后不驻留，因此可以通过指令反复加载。
@@ -64,7 +76,7 @@ exec.remove()
 ```
 
 ### 服务
-加载服务是可能的，并且比Java插件中的做法更为简单。你无法在脚本中提供一个服务。
+加载服务是可能的，并且比Java插件中的做法更为简单。但是你无法在脚本中提供一个服务。
 ```JS
 var economy = plugin.getService("Economy")
 var p = plugin.getPlayer("him")

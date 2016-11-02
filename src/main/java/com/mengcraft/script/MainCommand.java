@@ -52,7 +52,7 @@ public class MainCommand implements CommandExecutor {
                 return list(who);
             }
             if (label.equals("load")) {
-                return it.hasNext() && load(who, it.next());
+                return it.hasNext() && load(who, it.next(), ArrayHelper.toScriptArray(it));
             }
             if (label.equals("unload")) {
                 return it.hasNext() && unload(who, it.next());
@@ -91,10 +91,10 @@ public class MainCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean load(CommandSender who, String i) {
+    private boolean load(CommandSender who, String i, Object argument) {
         File file = new File(main.getDataFolder(), i);
         try {
-            main.load(file);
+            main.load(who, file, argument);
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         } catch (IllegalArgumentException | ScriptPluginException e) {

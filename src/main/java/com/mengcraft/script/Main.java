@@ -5,12 +5,15 @@ import com.google.common.collect.ImmutableList;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
@@ -24,9 +27,12 @@ public final class Main extends JavaPlugin {
 
     private final Map<String, HandledExecutor> executor = new HashMap<>();
     private Map<String, ScriptLoader.ScriptBinding> plugin;
+    private ScriptLoader loader;
 
     @Override
     public void onEnable() {
+        loader = new ScriptLoader(this);
+
         String[] i = {
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",
                 ChatColor.GREEN + "shop105595113.taobao.com"
@@ -61,18 +67,30 @@ public final class Main extends JavaPlugin {
         List<String> list = getConfig().getStringList("script");
         for (String i : list) {
             try {
-                load(new File(getDataFolder(), i));
+                load(getServer().getConsoleSender(), new File(getDataFolder(), i), null);
             } catch (ScriptPluginException e) {
                 getLogger().log(Level.WARNING, e.getMessage());
             }
         }
     }
 
-    protected void load(File file) throws ScriptPluginException {
+    protected void load(CommandSender sender, File file, Object argument) throws ScriptPluginException {
         Preconditions.checkArgument(file.isFile(), "file not exist");
         Preconditions.checkArgument(!isLoaded(file), "file is loaded");
+        try {
+            ScriptLoader.ScriptInfo info = new ScriptLoader.ScriptInfo()
+                    .setId("file:" + file.getName())
+                    .setContend(new FileReader(file))
+                    .setLoader(sender)
+                    .setArgument(argument);
+            load(info);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
-        ScriptLoader.ScriptBinding binding = ScriptLoader.load(this, file);
+    private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
+        ScriptLoader.ScriptBinding binding = loader.load(info);
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
