@@ -4,6 +4,8 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created on 16-10-28.
@@ -30,6 +32,14 @@ public final class ArrayHelper {
     }
 
     private ArrayHelper() {
+    }
+
+    public static <T> List<T> link(T... in) {
+        List<T> list = new LinkedList<>();
+        for (T i : in) {
+            list.add(i);
+        }
+        return list;
     }
 
     public static Object toScriptArray(Object input) {

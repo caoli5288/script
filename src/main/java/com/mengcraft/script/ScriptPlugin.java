@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
+import com.mengcraft.script.util.ArrayHelper;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -14,6 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 import javax.script.ScriptEngine;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -128,6 +130,17 @@ public final class ScriptPlugin {
         main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
     }
 
+    public void depend(String depend, Runnable runnable) {
+        depend(ArrayHelper.link(depend), runnable);
+    }
+
+    public void depend(List<String> depend, Runnable runnable) {
+        DependCall call = DependCall.build(depend, runnable, this);
+        if (!call.call()) {
+            schedule(call);
+        }
+    }
+
     public HandledTask schedule(Runnable run, int delay, int period, boolean b) {
         Preconditions.checkState(isLoaded(), "unloaded");
         BukkitScheduler scheduler = main.getServer().getScheduler();
@@ -144,7 +157,7 @@ public final class ScriptPlugin {
     }
 
     private Runnable valid(Runnable run, int period, HandledTask handled) {
-        return period > -1 ? run : cancellable(handled, run);
+        return period > -1 ? run : handle(handled, run);
     }
 
     public HandledTask schedule(Runnable runnable, int delay, int period) {
@@ -167,7 +180,7 @@ public final class ScriptPlugin {
         return schedule(runnable, 0, -1, false);
     }
 
-    private Runnable cancellable(HandledTask i, Runnable runnable) {
+    private Runnable handle(HandledTask i, Runnable runnable) {
         return () -> {
             try {
                 runnable.run();
@@ -264,6 +277,7 @@ public final class ScriptPlugin {
     }
 
     public static class Executor {
+
         private final String permission;
         private final String label;
         private final ScriptExecutor executor;
@@ -284,6 +298,60 @@ public final class ScriptPlugin {
 
         public ScriptExecutor getExecutor() {
             return executor;
+        }
+    }
+
+    public static class DependCall implements Runnable {
+        private final List<String> depend;
+        private Runnable command;
+        private ScriptPlugin plugin;
+
+        private DependCall(List<String> depend) {
+            this.depend = depend;
+        }
+
+        @Override
+        public void run() {
+            if (!call()) {
+                plugin.logger.info("Ignore depend call with " + depend + " not found");
+            }
+        }
+
+        public boolean call() {
+            boolean result = validata();
+            if (result) {
+                try {
+                    command.run();
+                } catch (Exception e) {
+                    plugin.logger.log(Level.SEVERE, "", e);
+                }
+            }
+            return result;
+        }
+
+        public boolean validata() {
+            boolean result = depend.isEmpty();
+            if (!result) {
+                Iterator<String> it = depend.iterator();
+                String i;
+                Plugin p;
+                while (it.hasNext()) {
+                    i = it.next();
+                    p = plugin.unsafe.getPlugin(i);
+                    if (!Main.nil(p) && p.isEnabled()) {
+                        it.remove();
+                    }
+                }
+                result = depend.isEmpty();
+            }
+            return result;
+        }
+
+        private static DependCall build(List<String> depend, Runnable command, ScriptPlugin plugin) {
+            DependCall chain = new DependCall(depend);
+            chain.command = command;
+            chain.plugin = plugin;
+            return chain;
         }
     }
 

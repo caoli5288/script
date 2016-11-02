@@ -2,8 +2,7 @@
 Load JavaScript plugin in bukkit server. 
 
 ## 示例
-一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性（非必须）。
-对象中的`handle`字段定义了脚本监听的事件。
+一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性（非必须）。对象中的`handle`字段定义了脚本监听的事件。
 ```JS
 var description = {
     "author":"mengcraft.com",
@@ -43,8 +42,7 @@ plugin.mapping.init("AnyPlugin")
 plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 ```
 ### 指令
-你可以添加一个或者多个指令。以下是添加`/echo`和`/script:echo`指令的示例代码。
-函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
+你可以添加一个或者多个指令。以下是添加`/echo`和`/script:echo`指令的示例代码。函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
 ```JS
 plugin.addExecutor("echo", function(sender, i) {
     if (Array.isArray(i)) sender.sendMessage(i.join(" "))
@@ -83,6 +81,18 @@ plugin.broadcast("&1这是第一行消息",
     "&2这是第二行消息",
     "&3这是第三行消息")
 ```
+
+### 插件依赖
+脚本加载的时机之于服务器插件加载的时机是不确定的。有些函数的调用必须确保在一些插件加载之后调用，否则可能得到意料之外的结果。
+```JS
+plugin.depend("Vault", function () {
+    var eco = getService("Economy");
+    plugin.addListener("playerjoinevent", function () {
+        eco.depositPlayer(p, 100);
+    })
+})
+```
+在这个用例中，如果`Vault`插件已经加载那么回调函数将立即执行，否则将推迟到下tick执行。如果插件仍未加载，回调函数将被抛弃并在控制台输出一个警告信息。
 
 ### 任务调度
 尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
