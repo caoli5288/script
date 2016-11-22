@@ -324,7 +324,7 @@ public final class ScriptPlugin {
         }
 
         public boolean call() {
-            boolean result = validata();
+            boolean result = validate();
             if (result) {
                 try {
                     command.run();
@@ -335,7 +335,7 @@ public final class ScriptPlugin {
             return result;
         }
 
-        public boolean validata() {
+        public boolean validate() {
             boolean result = depend.isEmpty();
             if (!result) {
                 Iterator<String> it = depend.iterator();
