@@ -19,19 +19,19 @@ public final class ArrayHelper {
         Object toScriptArray(Object input);
     }
 
-    private static Helper helper;
+    private static final Helper HELPER;
 
     static {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
         try {
             engine.eval("" +
-                    "function toScriptArray(input) {\n" +
+                    "var toScriptArray = function (input) {\n" +
                     "    return Array.prototype.slice.call(input);\n" +
                     "}");
         } catch (ScriptException e) {
             e.printStackTrace();
         }
-        helper = Invocable.class.cast(engine).getInterface(Helper.class);
+        HELPER = Invocable.class.cast(engine).getInterface(Helper.class);
     }
 
     private ArrayHelper() {
@@ -55,7 +55,7 @@ public final class ArrayHelper {
     }
 
     public static Object toScriptArray(String[] input) {
-        return helper.toScriptArray(input);
+        return HELPER.toScriptArray(input);
     }
 
 }
