@@ -115,7 +115,7 @@ public final class ScriptPlugin {
         return main.getServer().getPlayer(id);
     }
 
-    public Collection<?> getOnlineList() {
+    public Collection<?> getPlayerList() {
         return main.getServer().getOnlinePlayers();
     }
 
