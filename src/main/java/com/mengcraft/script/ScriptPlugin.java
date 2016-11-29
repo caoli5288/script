@@ -143,11 +143,11 @@ public final class ScriptPlugin {
     public void depend(List<String> depend, Runnable runnable) {
         DependCall call = DependCall.build(depend, runnable, this);
         if (!call.call()) {
-            schedule(call);
+            runTask(call);
         }
     }
 
-    public HandledTask schedule(Runnable run, int delay, int period, boolean b) {
+    public HandledTask runTask(Runnable run, int delay, int period, boolean b) {
         Preconditions.checkState(isHandled(), "unloaded");
         BukkitScheduler scheduler = main.getServer().getScheduler();
         HandledTask handled = new HandledTask(this);
@@ -166,24 +166,24 @@ public final class ScriptPlugin {
         return period > -1 ? run : handle(handled, run);
     }
 
-    public HandledTask schedule(Runnable runnable, int delay, int period) {
-        return schedule(runnable, delay, period, false);
+    public HandledTask runTask(Runnable runnable, int delay, int period) {
+        return runTask(runnable, delay, period, false);
     }
 
-    public HandledTask schedule(Runnable runnable, int delay, boolean b) {
-        return schedule(runnable, delay, -1, b);
+    public HandledTask runTask(Runnable runnable, int delay, boolean b) {
+        return runTask(runnable, delay, -1, b);
     }
 
-    public HandledTask schedule(Runnable runnable, int delay) {
-        return schedule(runnable, delay, -1, false);
+    public HandledTask runTask(Runnable runnable, int delay) {
+        return runTask(runnable, delay, -1, false);
     }
 
-    public HandledTask schedule(Runnable runnable, boolean b) {
-        return schedule(runnable, 0, -1, b);
+    public HandledTask runTask(Runnable runnable, boolean b) {
+        return runTask(runnable, 0, -1, b);
     }
 
-    public HandledTask schedule(Runnable runnable) {
-        return schedule(runnable, 0, -1, false);
+    public HandledTask runTask(Runnable runnable) {
+        return runTask(runnable, 0, -1, false);
     }
 
     private Runnable handle(HandledTask i, Runnable runnable) {
