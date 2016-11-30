@@ -112,26 +112,26 @@ plugin.depend("Vault", function () {
 ### 任务调度
 尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
 ```JS
-var task = plugin.schedule(function() {...}, 6000)
+var task = plugin.runTask(function() {...}, 6000)
 
 task.cancel()
 ```
 
 或者调度一个在下tick执行，并且每1800tick循环执行的任务。
 ```JS
-plugin.schedule(function() plugin.logger.info("hello, world"), 1, 1800)
+plugin.runTask(function() plugin.logger.info("hello, world"), 1, 1800)
 ```
 
 或者在下tick执行一个任务。
 ```JS
-plugin.schedule(function() plugin.logger.info("hello, world"))
+plugin.runTask(function() plugin.logger.info("hello, world"))
 ```
 
 异步的任务调度都是可行的，只需要在参数后传入`true`标识。
 ```JS
-plugin.schedule(function() {...}, true)
-plugin.schedule(function() {...}, 1, true)
-plugin.schedule(function() {...}, 1, 1800, true)
+plugin.runTask(function() {...}, true)
+plugin.runTask(function() {...}, 1, true)
+plugin.runTask(function() {...}, 1, 1800, true)
 ```
 
 ### 后台指令
