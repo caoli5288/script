@@ -83,13 +83,13 @@ public final class ScriptPlugin {
     public boolean unload() {
         if (isHandled()) {
             executor.forEach(i -> i.remove());
+            executor = null;
             task.forEach(i -> i.cancel());
+            task = null;
             listener.forEach(i -> i.remove());
+            listener = null;
             main.unload(this);
             main = null;
-            executor = null;
-            task = null;
-            listener = null;
             if (!nil(unloadHook)) {
                 try {
                     unloadHook.run();
