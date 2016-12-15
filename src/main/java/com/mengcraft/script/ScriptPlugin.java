@@ -136,15 +136,16 @@ public final class ScriptPlugin {
         main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
     }
 
-    public void depend(String depend, Runnable runnable) {
-        depend(ArrayHelper.link(depend), runnable);
+    public DependCall depend(String depend, Runnable runnable) {
+        return depend(ArrayHelper.link(depend), runnable);
     }
 
-    public void depend(List<String> depend, Runnable runnable) {
+    public DependCall depend(List<String> depend, Runnable runnable) {
         DependCall call = DependCall.build(depend, runnable, this);
         if (!call.call()) {
-            runTask(call);
+            runTask(() -> call.run());
         }
+        return call;
     }
 
     public HandledTask runTask(Runnable run, int delay, int period, boolean b) {
@@ -275,6 +276,7 @@ public final class ScriptPlugin {
     }
 
     public interface Unsafe {
+
         Server getServer();
 
         Plugin getPlugin(String id);
@@ -307,35 +309,61 @@ public final class ScriptPlugin {
         }
     }
 
-    public static class DependCall implements Runnable {
+    public static class DependCall {
+
         private final List<String> depend;
         private Runnable command;
+        private Runnable fail;
+        private boolean called;
+
         private ScriptPlugin plugin;
 
         private DependCall(List<String> depend) {
             this.depend = depend;
         }
 
-        @Override
-        public void run() {
-            if (!call()) {
-                plugin.logger.info("Ignore depend call with " + depend + " not found");
+        private void run() {
+            if (!Main.nil(command)) {
+                if (!call()) {
+                    failed();
+                }
+                command = null;
             }
         }
 
-        public boolean call() {
+        private void failed() {
+            if (Main.nil(fail)) {
+                plugin.logger.info("Ignore depend call with " + depend + " not found");
+            } else {
+                try {
+                    fail.run();
+                } catch (Exception e) {
+                    plugin.logger.log(Level.SEVERE, e.toString(), e);
+                }
+                fail = null;
+            }
+        }
+
+        public void onFail(Runnable fail) {
+            if (!called) {
+                this.fail = fail;
+            }
+        }
+
+        private boolean call() {
             boolean result = validate();
             if (result) {
                 try {
                     command.run();
                 } catch (Exception e) {
-                    plugin.logger.log(Level.SEVERE, "", e);
+                    plugin.logger.log(Level.SEVERE, e.toString(), e);
                 }
+                called = true;
             }
             return result;
         }
 
-        public boolean validate() {
+        private boolean validate() {
             boolean result = depend.isEmpty();
             if (!result) {
                 Iterator<String> it = depend.iterator();
@@ -359,6 +387,7 @@ public final class ScriptPlugin {
             chain.plugin = plugin;
             return chain;
         }
+
     }
 
     public static class Listener {

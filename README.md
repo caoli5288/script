@@ -109,6 +109,20 @@ plugin.depend("Vault", function () {
 ```
 在这个用例中，如果`Vault`插件已经加载那么回调函数将立即执行，否则将推迟到下tick执行，该行为视同任务调度。如果插件仍未加载，回调函数将被抛弃并在控制台输出一个警告信息。
 
+也可以同时依赖多个插件。
+```JS
+plugin.depend(["Vault", "AnyPlugin"], function () {...});
+```
+
+你可以给该行为添加一个失败时执行的回调函数。
+```JS
+plugin.depend("Vault", function () {...})
+    .onFail(function () {
+        plugin.logger.info("Vault NOT found!");
+        plugin.unload();
+    });
+```
+
 ### 任务调度
 尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
 ```JS
