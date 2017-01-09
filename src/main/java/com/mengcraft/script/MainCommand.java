@@ -45,17 +45,17 @@ public class MainCommand implements CommandExecutor {
         return false;
     }
 
-    private boolean admin(CommandSender who, Iterator<String> it) {
-        if (it.hasNext()) {
-            String label = it.next();
+    private boolean admin(CommandSender who, Iterator<String> i) {
+        if (i.hasNext()) {
+            String label = i.next();
             if (label.equals("list")) {
                 return list(who);
             }
             if (label.equals("load")) {
-                return it.hasNext() && load(who, it.next(), ArrayHelper.toScriptArray(it));
+                return i.hasNext() && load(who, i.next(), Main.join(i));
             }
             if (label.equals("unload")) {
-                return it.hasNext() && unload(who, it.next());
+                return i.hasNext() && unload(who, i.next());
             }
             if (label.equals("reload")) {
                 return reload(who);
@@ -91,7 +91,7 @@ public class MainCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean load(CommandSender who, String i, Object argument) {
+    private boolean load(CommandSender who, String i, String argument) {
         File file = new File(main.getDataFolder(), i);
         try {
             main.load(who, file, argument);

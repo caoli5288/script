@@ -87,7 +87,7 @@ public class ScriptLoader {
         private CommandSender loader;
         private String id;
         private Reader contend;
-        private Object argument;
+        private String argument;
 
         public ScriptInfo setLoader(CommandSender loader) {
             this.loader = loader;
@@ -104,7 +104,7 @@ public class ScriptLoader {
             return this;
         }
 
-        public ScriptInfo setArgument(Object argument) {
+        public ScriptInfo setArgument(String argument) {
             this.argument = argument;
             return this;
         }

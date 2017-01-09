@@ -45,15 +45,6 @@ public final class ArrayHelper {
         return list;
     }
 
-    public static Object toScriptArray(Iterator<String> input) {
-        ImmutableList.Builder<String> b = ImmutableList.builder();
-        input.forEachRemaining(b::add);
-        ImmutableList<String> list = b.build();
-        int l = list.size();
-        String[] out = new String[l];
-        return toScriptArray(list.toArray(out));
-    }
-
     public static Object toScriptArray(String[] input) {
         return HELPER.toScriptArray(input);
     }

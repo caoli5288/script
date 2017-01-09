@@ -19,16 +19,14 @@ var handle = function handle(event) {
 ```
 
 ### 加载
-将脚本文件名添加到`config.yml`中的`script`列后，脚本将在插件加载时随之加载。否则，请使用指令`/script load <脚本文件名>`加载脚本。脚本文件名后的参数将被以作为全局变量`argument`传入脚本中。任何自动加载的脚本`argument`为未定义。
+将脚本文件名添加到插件`config.yml`中的`script`列后，脚本将在插件加载时随之加载。否则，请使用指令`/script load <脚本文件名>`加载脚本。脚本文件名后的字符作为全局变量`argument`传入脚本中，类型为`string`。自动加载的脚本`argument`始终为未定义。
 ```JS
 if (argument) {
-    argument.forEach(function (arg) {
-        loader.sendMessage(arg);
-    });
+    loader.sendMessage(argument);
 }
 ```
 
-上例子中的`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
+`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
 
 ### 单次脚本
 如果脚本没有添加指令、事件监听和人物调度的行为，那么该脚本为单次脚本。单次脚本执行后不驻留，因此可以通过指令反复加载。
@@ -56,6 +54,9 @@ plugin.mapping.init("AnyPlugin")
 ```JS
 plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 ```
+
+请注意脚本处理事件继承与插件有所区别。例如，插件中监听`EntityDamageEvent`会将该类的子类一并监听，而脚本的监听器对此做了额外处理以确保不会监听到子类。
+
 ### 指令
 你可以添加一个或者多个指令。以下是添加`/echo`和`/script:echo`指令的示例代码。函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
 ```JS
@@ -107,6 +108,7 @@ plugin.depend("Vault", function () {
     })
 })
 ```
+
 在这个用例中，如果`Vault`插件已经加载那么回调函数将立即执行，否则将推迟到下tick执行，该行为视同任务调度。如果插件仍未加载，回调函数将被抛弃并在控制台输出一个警告信息。
 
 也可以同时依赖多个插件。
@@ -121,6 +123,15 @@ plugin.depend("Vault", function () {...})
         plugin.logger.info("Vault NOT found!");
         plugin.unload();
     });
+```
+
+### 交互
+与其他脚本或者插件进行交互是不安全的，但你仍可以在必要时这么做。使用时请注意脚本或插件加载顺序，必要时使用`plugin.depend`函数。
+```
+var p = plugin.unsafe.getPlugin("PlayerPoints").getApi()
+p.give(plugin.getPlayer("Him"), 100)
+
+plugin.unsafe.getScript("other_script").plugin.unload()
 ```
 
 ### 任务调度
@@ -163,15 +174,6 @@ plugin.unload();
 ```
 plugin.setUnloadHook(function() {...})
 plugin.setUnloadHook(null)
-```
-
-### 交互
-与其他脚本或者插件进行交互是不安全的，但你仍可以在必要时这么做。使用时请注意脚本加载顺序。
-```
-var p = plugin.unsafe.getPlugin("PlayerPoints").getApi()
-p.give(plugin.getPlayer("Him"), 100)
-
-plugin.unsafe.getScript("other_script").plugin.unload()
 ```
 
 ### 插件指令

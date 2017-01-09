@@ -16,6 +16,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -74,7 +75,7 @@ public final class Main extends JavaPlugin {
         }
     }
 
-    protected void load(CommandSender sender, File file, Object argument) throws ScriptPluginException {
+    protected void load(CommandSender sender, File file, String argument) throws ScriptPluginException {
         Preconditions.checkArgument(file.isFile(), "file not exist");
         Preconditions.checkArgument(!isLoaded(file), "file is loaded");
         try {
@@ -184,6 +185,18 @@ public final class Main extends JavaPlugin {
 
     public static boolean nil(Object i) {
         return i == null;
+    }
+
+    public static String join(Iterator<String> i) {
+        if (i.hasNext()) {
+            StringBuilder b = new StringBuilder(i.next());
+            while (i.hasNext()) {
+                b.append(' ');
+                b.append(i.next());
+            }
+            return b.toString();
+        }
+        return null;
     }
 
 }
