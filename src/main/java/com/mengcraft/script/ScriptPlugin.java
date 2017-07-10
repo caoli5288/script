@@ -5,6 +5,9 @@ import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.RefHelper;
+import lombok.val;
+import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -31,6 +34,7 @@ import static com.mengcraft.script.Main.nil;
 public final class ScriptPlugin {
 
     private final Unsafe unsafe = new Unsafe() {
+
         public Server getServer() {
             return main.getServer();
         }
@@ -45,6 +49,7 @@ public final class ScriptPlugin {
         }
     };
 
+    private List<HandledPlaceholder> placeholder = new LinkedList<>();
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
     private List<HandledTask> task = new LinkedList<>();
@@ -73,7 +78,7 @@ public final class ScriptPlugin {
 
     public boolean isIdled() {
         Preconditions.checkState(isHandled(), "unloaded");
-        return executor.isEmpty() && listener.isEmpty() && task.isEmpty();
+        return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && task.isEmpty();
     }
 
     public boolean isHandled() {
@@ -88,6 +93,8 @@ public final class ScriptPlugin {
             task = null;
             listener.forEach(i -> i.remove());
             listener = null;
+            placeholder.forEach(i -> i.remove());
+            placeholder = null;
             main.unload(this);
             main = null;
             if (!nil(unloadHook)) {
@@ -206,6 +213,14 @@ public final class ScriptPlugin {
         return listener.remove(i);
     }
 
+    protected boolean remove(HandledPlaceholder i) {
+        if (placeholder.remove(i)) {
+            val map = (Map) RefHelper.getField(PlaceholderAPI.class, "placeholders");
+            return map.remove(i.getId(), i.getHook());
+        }
+        return false;
+    }
+
     protected boolean cancel(HandledTask i) {
         boolean b = task.remove(i);
         if (b) {
@@ -213,6 +228,15 @@ public final class ScriptPlugin {
             i.setId(-1);
         }
         return b;
+    }
+
+    public HandledPlaceholder addPlaceholder(String id, HandledPlaceholder.Func func) {
+        val hook = new HandledPlaceholder(this, id, func);
+        if (PlaceholderAPI.registerPlaceholderHook(id, hook.getHook())) {
+            placeholder.add(hook);
+            return hook;
+        }
+        throw new IllegalStateException("id " + id + " conflict");
     }
 
     public HandledListener addListener(String event, ScriptListener i) {
@@ -272,6 +296,10 @@ public final class ScriptPlugin {
 
     @Override
     public String toString() {
+        return id;
+    }
+
+    public String getId() {
         return id;
     }
 

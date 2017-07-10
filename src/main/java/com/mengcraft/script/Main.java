@@ -99,7 +99,6 @@ public final class Main extends JavaPlugin {
             if (!nil(i)) {
                 ScriptPluginException.thr(loaded, "Name conflict with " + i.getPlugin());
             }
-
             plugin.put(name, binding);
         }
     }

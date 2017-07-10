@@ -3,6 +3,8 @@ main: com.mengcraft.script.Main
 version: ${project.version}
 author: caoli5288
 website: http://github.com/caoli5288/script/
+softdepend:
+- 'PlaceholderAPI'
 
 commands:
   script:

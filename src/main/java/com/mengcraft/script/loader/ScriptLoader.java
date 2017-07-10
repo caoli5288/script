@@ -47,6 +47,7 @@ public class ScriptLoader {
             loadListener(plugin, engine);
             main.getLogger().info(load(plugin));
         } else {
+            plugin.setDescription("name", info.id);
             main.getLogger().info("Load script " + info.id);
         }
         return ScriptBinding.bind(plugin, engine);

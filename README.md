@@ -176,6 +176,17 @@ plugin.setUnloadHook(function() {...})
 plugin.setUnloadHook(null)
 ```
 
+### Placeholder
+如果服务器安装有PlaceholderAPI，那么可以很方便的注册placeholder。
+```
+val hook = plugin.addPlaceholder("sp", function (p, input) {
+    // sp_any_world -> any|world
+    return input[0] + "|" + input[1];
+});
+
+hook.remove();// remove it
+```
+
 ### 插件指令
 执行下列权限需要`script.admin`权限。
 - /script list
