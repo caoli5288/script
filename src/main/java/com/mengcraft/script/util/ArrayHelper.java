@@ -1,12 +1,9 @@
 package com.mengcraft.script.util;
 
-import com.google.common.collect.ImmutableList;
-
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -43,6 +40,10 @@ public final class ArrayHelper {
             list.add(i);
         }
         return list;
+    }
+
+    public static <T> T[] asArray(T... input) {
+        return input;
     }
 
     public static Object toScriptArray(String[] input) {

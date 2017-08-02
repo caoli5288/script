@@ -15,21 +15,18 @@ var handle = function handle(event) {
     var p = event.player
     p.sendMessage("hello, " + p.name)
 }
-
 ```
 
 ### 加载
-将脚本文件名添加到插件`config.yml`中的`script`列后，脚本将在插件加载时随之加载。否则，请使用指令`/script load <脚本文件名>`加载脚本。脚本文件名后的字符作为全局变量`argument`传入脚本中，类型为`string`。自动加载的脚本`argument`始终为未定义。
+插件在启动时自动加载插件根目录下文件名匹配`*.js`的脚本，不匹配或位于子目录的脚本请使用指令`/script load <文件名>`加载。脚本文件名后的字符作为全局变量`argument`传入脚本中，类型为`string`。自动加载的脚本`argument`始终为未定义。
 ```JS
 if (argument) {
     loader.sendMessage(argument);
 }
 ```
 
-`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
-
 ### 单次脚本
-如果脚本没有添加指令、事件监听和人物调度的行为，那么该脚本为单次脚本。单次脚本执行后不驻留，因此可以通过指令反复加载。
+如果脚本没有添加指令、事件监听和任务调度等行为，那么该脚本为单次脚本。单次脚本执行后不驻留，因此可以通过指令反复加载。
 
 ### 事件
 这里有另一种更加灵活的方式监听一个事件。你可以随时添加或者去除一个或者多个监听器。
@@ -102,7 +99,7 @@ plugin.broadcast("&1这是第一行消息",
 脚本加载的时机之于服务器插件加载的时机是不确定的。有些函数的调用必须确保在一些插件加载之后调用，否则可能得到意料之外的结果。
 ```JS
 plugin.depend("Vault", function () {
-    var eco = getService("Economy");
+    var eco = plugin.getService("Economy");
     plugin.addListener("playerjoinevent", function () {
         eco.depositPlayer(p, 100);
     })
@@ -138,7 +135,6 @@ plugin.unsafe.getScript("other_script").plugin.unload()
 尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
 ```JS
 var task = plugin.runTask(function() {...}, 6000)
-
 task.cancel()
 ```
 
@@ -164,6 +160,15 @@ plugin.runTask(function() {...}, 1, 1800, true)
 plugin.runCommand("kill him");
 ```
 
+`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
+
+### 引用其他插件类
+一些服务端架构方面的限制导致脚本中无法直接使用内置方法引用其他插件类，此时请使用这个方法获取。
+```JS
+var viaversion = plugin.loadType("us.myles.ViaVersion.api.Via");
+var api = viaversion.static.getAPI();// 静态方法
+```
+
 ### 卸载
 脚本卸载时将移除所有的事件监听、指令和未完成的任务，请谨慎操作。
 ```JS
@@ -172,8 +177,8 @@ plugin.unload();
 
 如果你定义了卸载钩子，卸载钩子将在脚本卸载完成时被执行。钩子中无法执行大部分`plugin`接口调用。
 ```
-plugin.setUnloadHook(function() {...})
-plugin.setUnloadHook(null)
+plugin.setUnloadHook(function() {...});
+plugin.setUnloadHook(null);
 ```
 
 ### Placeholder
@@ -183,7 +188,6 @@ val hook = plugin.addPlaceholder("sp", function (p, input) {
     // sp_any_world -> any|world
     return input[0] + "|" + input[1];
 });
-
 hook.remove();// remove it
 ```
 
@@ -200,4 +204,4 @@ hook.remove();// remove it
     - 所有已加载的脚本将被卸载，然后加载所有定义在配置中`script`列的脚本。
 
 ### 注意
-脚本可以正确调用`Java`中的重载方法，但是脚本本身无法定义重载函数，请务必注意这一点。
+初次接触js脚本的童鞋注意，脚本可以正确调用`Java`中的重载方法，但是脚本无法声明重载函数，请务必注意。

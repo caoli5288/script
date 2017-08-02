@@ -6,6 +6,7 @@ import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.RefHelper;
+import lombok.SneakyThrows;
 import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.ChatColor;
@@ -205,15 +206,15 @@ public final class ScriptPlugin {
         };
     }
 
-    protected boolean remove(HandledExecutor i) {
+    boolean remove(HandledExecutor i) {
         return executor.remove(i) && main.remove(i);
     }
 
-    protected boolean remove(HandledListener i) {
+    boolean remove(HandledListener i) {
         return listener.remove(i);
     }
 
-    protected boolean remove(HandledPlaceholder i) {
+    boolean remove(HandledPlaceholder i) {
         if (placeholder.remove(i)) {
             val map = (Map) RefHelper.getField(PlaceholderAPI.class, "placeholders");
             return map.remove(i.getId(), i.getHook());
@@ -221,7 +222,7 @@ public final class ScriptPlugin {
         return false;
     }
 
-    protected boolean cancel(HandledTask i) {
+    boolean cancel(HandledTask i) {
         boolean b = task.remove(i);
         if (b) {
             main.getServer().getScheduler().cancelTask(i.getId());
@@ -271,6 +272,11 @@ public final class ScriptPlugin {
         for (String i : in) {
             main.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', i));
         }
+    }
+
+    @SneakyThrows
+    public Class<?> loadType(String type) {
+        return main.getClass().getClassLoader().loadClass(type);
     }
 
     public Logger getLogger() {
