@@ -149,10 +149,9 @@ public final class ScriptPlugin {
     }
 
     public DependCall depend(List<String> depend, Runnable runnable) {
-        DependCall call = DependCall.build(depend, runnable, this);
-        if (!call.call()) {
-            runTask(() -> call.run());
-        }
+        val call = DependCall.build(depend, runnable, this);
+        if (!call.call()) runTask(call::run);
+
         return call;
     }
 

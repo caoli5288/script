@@ -4,6 +4,7 @@ import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Main;
 import com.mengcraft.script.ScriptListener;
 import com.mengcraft.script.ScriptPlugin;
+import lombok.Builder;
 import org.bukkit.command.CommandSender;
 
 import javax.script.Invocable;
@@ -31,7 +32,7 @@ public class ScriptLoader {
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
         ScriptPlugin plugin = new ScriptPlugin(main, info.id);
         engine.put("plugin", plugin);
-        engine.put("argument", info.argument);
+        engine.put("arg", info.arg);
         engine.put("loader", info.loader);
         try {
             engine.eval(info.contend);
@@ -83,33 +84,13 @@ public class ScriptLoader {
         return Invocable.class.cast(engine).getInterface(i);
     }
 
+    @Builder
     public final static class ScriptInfo {
 
         private CommandSender loader;
         private String id;
         private Reader contend;
-        private String argument;
-
-        public ScriptInfo setLoader(CommandSender loader) {
-            this.loader = loader;
-            return this;
-        }
-
-        public ScriptInfo setId(String id) {
-            this.id = id;
-            return this;
-        }
-
-        public ScriptInfo setContend(Reader contend) {
-            this.contend = contend;
-            return this;
-        }
-
-        public ScriptInfo setArgument(String argument) {
-            this.argument = argument;
-            return this;
-        }
-
+        private Object arg;
     }
 
     public final static class ScriptBinding {

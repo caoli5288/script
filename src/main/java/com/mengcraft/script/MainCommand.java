@@ -22,7 +22,7 @@ public class MainCommand implements CommandExecutor {
     private final Map<String, HandledExecutor> executor;
     private final Main main;
 
-    public MainCommand(Main main, Map<String, HandledExecutor> executor) {
+    MainCommand(Main main, Map<String, HandledExecutor> executor) {
         this.main = main;
         this.executor = executor;
     }
@@ -40,7 +40,7 @@ public class MainCommand implements CommandExecutor {
             if (nil(handled)) {
                 throw new IllegalStateException("喵");
             }
-            return handled.execute(who, ArrayHelper.toScriptArray(j));
+            return handled.execute(who, ArrayHelper.toJSArray(j));
         }
         return false;
     }
@@ -52,7 +52,7 @@ public class MainCommand implements CommandExecutor {
                 return list(who);
             }
             if (label.equals("load")) {
-                return i.hasNext() && load(who, i.next(), Main.join(i));
+                return i.hasNext() && load(who, i.next(), i.hasNext() ? ArrayHelper.toJSArray(i) : null);
             }
             if (label.equals("unload")) {
                 return i.hasNext() && unload(who, i.next());
@@ -91,10 +91,10 @@ public class MainCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean load(CommandSender who, String i, String argument) {
+    private boolean load(CommandSender who, String i, Object arg) {
         File file = new File(main.getDataFolder(), i);
         try {
-            main.load(who, file, argument);
+            main.load(who, file, arg);
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         } catch (IllegalArgumentException | ScriptPluginException e) {

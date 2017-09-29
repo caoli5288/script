@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.util.ArrayHelper;
+import lombok.SneakyThrows;
 import lombok.val;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -14,11 +15,9 @@ import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -35,7 +34,7 @@ public final class Main extends JavaPlugin {
     public void onEnable() {
         loader = new ScriptLoader(this);
 
-        getServer().getConsoleSender().sendMessage(ArrayHelper.asArray(
+        getServer().getConsoleSender().sendMessage(ArrayHelper.toArray(
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",
                 ChatColor.GREEN + "shop105595113.taobao.com"));
 
@@ -75,19 +74,17 @@ public final class Main extends JavaPlugin {
         }
     }
 
-    protected void load(CommandSender sender, File file, String argument) throws ScriptPluginException {
+    @SneakyThrows
+    protected void load(CommandSender loader, File file, Object arg) throws ScriptPluginException {
         Preconditions.checkArgument(file.isFile(), "file not exist");
         Preconditions.checkArgument(!isLoaded(file), "file is loaded");
-        try {
-            ScriptLoader.ScriptInfo info = new ScriptLoader.ScriptInfo()
-                    .setId("file:" + file.getName())
-                    .setContend(new FileReader(file))
-                    .setLoader(sender)
-                    .setArgument(argument);
-            load(info);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        load(ScriptLoader.ScriptInfo.builder()
+                .loader(loader)
+                .id("file:" + file.getName())
+                .contend(new FileReader(file))
+                .arg(arg)
+                .build()
+        );
     }
 
     private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
@@ -133,27 +130,24 @@ public final class Main extends JavaPlugin {
         }
     }
 
+    @SneakyThrows
     protected boolean remove(HandledExecutor handled) {
-        String label = handled.getLabel();
-        if (executor.containsKey(label)) {
-            try {
-                Field field = SimplePluginManager.class.getDeclaredField("commandMap");
-                field.setAccessible(true);
-                SimpleCommandMap i = SimpleCommandMap.class.cast(field.get(getServer().getPluginManager()));
-                Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
-                f.setAccessible(true);
-                Map handler = Map.class.cast(f.get(i));
-                PluginCommand command = getCommand("script");
-                handler.remove(label, command);
-                handler.remove("script:" + label, command);
-                executor.remove(label);
-                executor.remove("script:" + label);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-            return true;
+        boolean b = executor.containsKey(handled.getLabel());
+        if (b) {
+            String label = handled.getLabel();
+            Field field = SimplePluginManager.class.getDeclaredField("commandMap");
+            field.setAccessible(true);
+            SimpleCommandMap i = SimpleCommandMap.class.cast(field.get(getServer().getPluginManager()));
+            Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
+            f.setAccessible(true);
+            Map handler = Map.class.cast(f.get(i));
+            PluginCommand command = getCommand("script");
+            handler.remove(label, command);
+            handler.remove("script:" + label, command);
+            executor.remove(label);
+            executor.remove("script:" + label);
         }
-        return false;
+        return b;
     }
 
     boolean unload(ScriptPlugin i) {
@@ -184,18 +178,6 @@ public final class Main extends JavaPlugin {
 
     public static boolean nil(Object i) {
         return i == null;
-    }
-
-    public static String join(Iterator<String> i) {
-        if (i.hasNext()) {
-            StringBuilder b = new StringBuilder(i.next());
-            while (i.hasNext()) {
-                b.append(' ');
-                b.append(i.next());
-            }
-            return b.toString();
-        }
-        return null;
     }
 
 }

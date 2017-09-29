@@ -18,10 +18,10 @@ var handle = function handle(event) {
 ```
 
 ### 加载
-插件在启动时自动加载插件根目录下文件名匹配`*.js`的脚本，不匹配或位于子目录的脚本请使用指令`/script load <文件名>`加载。脚本文件名后的字符作为全局变量`argument`传入脚本中，类型为`string`。自动加载的脚本`argument`始终为未定义。
+插件在启动时自动加载插件根目录下文件名匹配`*.js`的脚本，不匹配或位于子目录的脚本请使用指令`/script load <文件名>`加载。脚本文件名后的字符作为全局变量`arg`传入脚本中，类型为`string[]`。自动加载的脚本`arg`始终为未定义。
 ```JS
-if (argument) {
-    loader.sendMessage(argument);
+if (arg) {
+    loader.sendMessage(arg.join(" "));
 }
 ```
 
