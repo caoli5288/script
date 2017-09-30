@@ -18,7 +18,7 @@ public class ScriptLogger extends Logger {
     private String i;
 
     public ScriptLogger(Main main, ScriptPlugin plugin) {
-        super("Script|" + plugin.toString(), null);
+        super("SCRIPT|" + plugin.getId(), null);
         setParent(main.getLogger());
         setLevel(Level.ALL);
         this.plugin = plugin;
@@ -27,16 +27,16 @@ public class ScriptLogger extends Logger {
     @Override
     public void log(LogRecord record) {
         record.setMessage(i() + record.getMessage());
-        super.log(record);
+        getParent().log(record);
     }
 
-    private String i() {
+    String i() {
         if (nil(i)) {
             String name = plugin.getDescription("name");
             if (nil(name)) {
-                return "[Script|" + plugin.toString() + "] ";
+                return "[" + plugin.getId() + "] ";
             }
-            i = "[Script|" + name + "] ";
+            i = "[" + name + "] ";
         }
         return i;
     }

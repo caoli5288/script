@@ -113,7 +113,7 @@ public class ScriptLoader {
 
         @Override
         public String toString() {
-            return plugin.toString();
+            return plugin.getId();
         }
 
         private static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {

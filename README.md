@@ -81,7 +81,7 @@ var p = plugin.getPlayer("him")
 if (economy && p) {
     economy.depositPlayer(p, 100)
     p.sendMessage("you receive 100 dollar")
-    plugin.playerList.forEach(function(player) {
+    plugin.getAll().forEach(function(player) {
         player.sendMessage("lucky! " + p.name + " receive 100 dollar");
     })
 }

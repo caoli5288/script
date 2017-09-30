@@ -6,18 +6,17 @@ import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.RefHelper;
+import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 
 import javax.script.ScriptEngine;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -34,22 +33,6 @@ import static com.mengcraft.script.Main.nil;
  */
 public final class ScriptPlugin {
 
-    private final Unsafe unsafe = new Unsafe() {
-
-        public Server getServer() {
-            return main.getServer();
-        }
-
-        public Plugin getPlugin(String id) {
-            return main.getServer().getPluginManager().getPlugin(id);
-        }
-
-        public ScriptEngine getScript(String id) {
-            ScriptLoader.ScriptBinding binding = main.getScript(id);
-            return !nil(binding) ? binding.getEngine() : null;
-        }
-    };
-
     private List<HandledPlaceholder> placeholder = new LinkedList<>();
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
@@ -62,15 +45,33 @@ public final class ScriptPlugin {
     private Main main;
     private Runnable unloadHook;
 
+    private final Unsafe unsafe = new Unsafe() {
+
+        @Override
+        public Main getMainPlugin() {
+            return main;
+        }
+
+        public Server getServer() {
+            return main.getServer();
+        }
+
+        public Plugin getPlugin(String id) {
+            return main.getServer().getPluginManager().getPlugin(id);
+        }
+
+        public ScriptEngine getScript(String id) {
+            ScriptLoader.ScriptBinding binding = main.getSBinding(id);
+            return !nil(binding) ? binding.getEngine() : null;
+        }
+    };
+
+
     public ScriptPlugin(Main main, String id) {
         this.id = id;
         this.main = main;
         description = new ScriptDescription();
         logger = new ScriptLogger(main, this);
-    }
-
-    public List<HandledListener> getListener() {
-        return new ArrayList<>(listener);
     }
 
     public String getDescription(String key) {
@@ -111,6 +112,10 @@ public final class ScriptPlugin {
         return false;
     }
 
+    public boolean unload4Idle() {
+        return isIdled() && unload();
+    }
+
     public Unsafe getUnsafe() {
         return unsafe;
     }
@@ -123,7 +128,7 @@ public final class ScriptPlugin {
         return main.getServer().getPlayer(id);
     }
 
-    public Collection<?> getPlayerList() {
+    public Collection<?> getAll() {
         return main.getServer().getOnlinePlayers();
     }
 
@@ -150,28 +155,19 @@ public final class ScriptPlugin {
 
     public DependCall depend(List<String> depend, Runnable runnable) {
         val call = DependCall.build(depend, runnable, this);
-        if (!call.call()) runTask(call::run);
+        if (!call.call()) runTask(call).complete(this::unload4Idle);
 
         return call;
     }
 
-    public HandledTask runTask(Runnable run, int delay, int period, boolean b) {
+    public HandledTask runTask(@NonNull Runnable runnable, int delay, int period, boolean b) {
         Preconditions.checkState(isHandled(), "unloaded");
-        BukkitScheduler scheduler = main.getServer().getScheduler();
-        HandledTask handled = new HandledTask(this);
-        BukkitTask i;
-        if (b) {
-            i = scheduler.runTaskTimerAsynchronously(main, valid(run, period, handled), delay, period);
-        } else {
-            i = scheduler.runTaskTimer(main, valid(run, period, handled), delay, period);
-        }
-        handled.setId(i.getTaskId());
+        val handled = new HandledTask(this, runnable, period);
         task.add(handled);
+        val run = Bukkit.getScheduler();
+        handled.setId(b ? run.runTaskTimerAsynchronously(main, handled, delay, period).getTaskId()
+                : run.runTaskTimer(main, handled, delay, period).getTaskId());
         return handled;
-    }
-
-    private Runnable valid(Runnable run, int period, HandledTask handled) {
-        return period > -1 ? run : handle(handled, run);
     }
 
     public HandledTask runTask(Runnable runnable, int delay, int period) {
@@ -194,17 +190,6 @@ public final class ScriptPlugin {
         return runTask(runnable, 0, -1, false);
     }
 
-    private Runnable handle(HandledTask i, Runnable runnable) {
-        return () -> {
-            try {
-                runnable.run();
-            } catch (Exception e) {
-                logger.log(Level.WARNING, e.getMessage(), e);
-            }
-            i.cancel();
-        };
-    }
-
     boolean remove(HandledExecutor i) {
         return executor.remove(i) && main.remove(i);
     }
@@ -222,7 +207,7 @@ public final class ScriptPlugin {
     }
 
     boolean cancel(HandledTask i) {
-        boolean b = task.remove(i);
+        val b = task.remove(i);
         if (b) {
             main.getServer().getScheduler().cancelTask(i.getId());
             i.setId(-1);
@@ -287,21 +272,23 @@ public final class ScriptPlugin {
         return EventMapping.INSTANCE;
     }
 
-    public void setDescription(Map<String, Object> in) {
+    public void setDescription(Map<String, String> in) {
         Preconditions.checkState(isHandled(), "unloaded");
         in.forEach((i, value) -> {
-            description.put(i, value.toString());
+            if (!description.containsKey(i)) {
+                description.put(i, value);
+            }
         });
     }
 
-    public void setDescription(String key, String value) {
+    public boolean setDescription(@NonNull String key, String value) {
         Preconditions.checkState(isHandled(), "unloaded");
-        description.put(key, value);
+        return description.containsKey(key) && description.put(key, value) == null;
     }
 
     @Override
     public String toString() {
-        return id;
+        return getId();
     }
 
     public String getId() {
@@ -309,6 +296,8 @@ public final class ScriptPlugin {
     }
 
     public interface Unsafe {
+
+        Main getMainPlugin();
 
         Server getServer();
 
@@ -342,7 +331,7 @@ public final class ScriptPlugin {
         }
     }
 
-    public static class DependCall {
+    public static class DependCall implements Runnable {
 
         private final List<String> depend;
         private Runnable command;
@@ -355,7 +344,7 @@ public final class ScriptPlugin {
             this.depend = depend;
         }
 
-        private void run() {
+        public void run() {
             if (!Main.nil(command)) {
                 if (!call()) {
                     failed();
@@ -424,6 +413,7 @@ public final class ScriptPlugin {
     }
 
     public static class Listener {
+
         private final ScriptListener listener;
         private final int priority;
 

@@ -6,6 +6,7 @@ import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.util.ArrayHelper;
 import lombok.SneakyThrows;
+import lombok.experimental.var;
 import lombok.val;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -66,7 +67,7 @@ public final class Main extends JavaPlugin {
             val i = new File(getDataFolder(), l);
             if (i.isFile() && l.matches(".+\\.js")) {
                 try {
-                    load(getServer().getConsoleSender(), i, null);
+                    load(getServer().getConsoleSender(), l, null);
                 } catch (ScriptPluginException e) {
                     getLogger().log(Level.WARNING, e.getMessage());
                 }
@@ -75,16 +76,15 @@ public final class Main extends JavaPlugin {
     }
 
     @SneakyThrows
-    protected void load(CommandSender loader, File file, Object arg) throws ScriptPluginException {
-        Preconditions.checkArgument(file.isFile(), "file not exist");
-        Preconditions.checkArgument(!isLoaded(file), "file is loaded");
+    protected void load(CommandSender loader, String path, Object arg) throws ScriptPluginException {
+        File loadable = new File(getDataFolder(), path);
+        thr(!loadable.isFile() || !isLoaded(loadable), "path not loadable");
+
         load(ScriptLoader.ScriptInfo.builder()
                 .loader(loader)
-                .id("file:" + file.getName())
-                .contend(new FileReader(file))
-                .arg(arg)
-                .build()
-        );
+                .id("file:" + path)
+                .contend(new FileReader(loadable))
+                .arg(arg).build());
     }
 
     private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
@@ -102,7 +102,7 @@ public final class Main extends JavaPlugin {
 
     private boolean isLoaded(File file) {
         String id = "file:" + file.getName();
-        return !nil(getScriptById(id));
+        return !nil(lookById(id));
     }
 
     public ImmutableList<String> list() {
@@ -158,22 +158,27 @@ public final class Main extends JavaPlugin {
     }
 
     boolean unload(String id) {
-        ScriptLoader.ScriptBinding binding = plugin.get(id);
-        if (nil(binding) && id.startsWith("file:")) {
-            binding = getScriptById(id);
-        }
+        val binding = getSBinding(id);
         return !nil(binding) && binding.getPlugin().unload();
     }
 
-    ScriptLoader.ScriptBinding getScriptById(String id) {
+    ScriptLoader.ScriptBinding lookById(String id) {
         for (ScriptLoader.ScriptBinding i : plugin.values()) {
             if (i.toString().equals(id)) return i;
         }
         return null;
     }
 
-    public ScriptLoader.ScriptBinding getScript(String name) {
-        return plugin.get(name);
+    public ScriptLoader.ScriptBinding getSBinding(String name) {
+        var binding = plugin.get(name);
+        if (nil(binding) && name.startsWith("file:")) {
+            binding = lookById(name);
+        }
+        return binding;
+    }
+
+    public static void thr(boolean b, String message) {
+        if (b) throw new IllegalStateException(message);
     }
 
     public static boolean nil(Object i) {

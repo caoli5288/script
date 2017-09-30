@@ -7,7 +7,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
@@ -92,9 +91,8 @@ public class MainCommand implements CommandExecutor {
     }
 
     private boolean load(CommandSender who, String i, Object arg) {
-        File file = new File(main.getDataFolder(), i);
         try {
-            main.load(who, file, arg);
+            main.load(who, i, arg);
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         } catch (IllegalArgumentException | ScriptPluginException e) {
