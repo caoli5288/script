@@ -53,7 +53,22 @@ plugin.addListener("AnyPluginEvent", function(event) {...})
 plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 ```
 
+你可以按正则过滤事件，注意事件名使用小写字母。
+```JS
+plugin.mapping.filter("any.*event").forEach(function (name) {
+    plugin.addListener(name, function (evt) {...})
+})
+```
+
 请注意脚本处理事件继承与插件有所区别。例如，插件中监听`EntityDamageEvent`会将该类的子类一并监听，而脚本的监听器对此做了额外处理以确保不会监听到子类。
+
+### 玩家权限
+可以在脚本中给予玩家权限。权限仅在玩家本次在线过程中有效。插件卸载不会移除权限。
+```JS
+var p = plugin.addPermission(plugin.getPlayer("md_5"), "script.admin")
+// do any here
+p.remove()
+```
 
 ### 指令
 你可以添加一个或者多个指令。以下代码同时添加`/echo`和`/script:echo`指令。回调函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。

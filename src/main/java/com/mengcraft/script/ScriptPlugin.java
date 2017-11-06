@@ -14,6 +14,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.Plugin;
 
 import javax.script.ScriptEngine;
@@ -247,6 +248,19 @@ public final class ScriptPlugin {
 
     public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
         return addExecutor(label, null, executor);
+    }
+
+    public PermissionAttachment addPermission(Player p, String any) {
+        PermissionAttachment attachment = p.addAttachment(main);
+        boolean add = true;
+        while (any.charAt(0) == '-') {
+            any = any.substring(1);
+            if (add) {
+                add = false;
+            }
+        }
+        attachment.setPermission(any, add);
+        return attachment;
     }
 
     public void setUnloadHook(Runnable unloadHook) {
