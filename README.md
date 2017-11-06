@@ -42,9 +42,10 @@ var listener = plugin.addListener("playerjoinevent", function(event) {...})
 listener.remove()
 ```
 
-对于第三方插件中的事件，需要先注册到脚本插件中才能使用。
+对于部分第三方插件中的事件，可能需要在监听前进行注册操作。
 ```JS
 plugin.mapping.init("AnyPlugin")
+plugin.addListener("AnyPluginEvent", function(event) {...})
 ```
 
 如果类加载器未把事件类加载到内存中，可能需要使用类加载器加载。
@@ -55,7 +56,7 @@ plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
 请注意脚本处理事件继承与插件有所区别。例如，插件中监听`EntityDamageEvent`会将该类的子类一并监听，而脚本的监听器对此做了额外处理以确保不会监听到子类。
 
 ### 指令
-你可以添加一个或者多个指令。以下是添加`/echo`和`/script:echo`指令的示例代码。函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
+你可以添加一个或者多个指令。以下代码同时添加`/echo`和`/script:echo`指令。回调函数的第一个参数是指令执行者，第二个参数是指令参数，类型为`Array`。
 ```JS
 plugin.addExecutor("echo", function(sender, i) {
     if (Array.isArray(i)) sender.sendMessage(i.join(" "))
@@ -132,7 +133,7 @@ plugin.unsafe.getScript("other_script").plugin.unload()
 ```
 
 ### 任务调度
-尝试在脚本加载6000tick后卸载脚本，你可以随时在任务未执行前取消它。
+尝试在脚本加载6000tick后执行任务，你可以随时在任务未执行前取消它。
 ```JS
 var task = plugin.runTask(function() {...}, 6000)
 task.cancel()
@@ -159,8 +160,6 @@ plugin.runTask(function() {...}, 1, 1800, true)
 ```JS
 plugin.runCommand("kill him");
 ```
-
-`loader`为脚本加载者。如果脚本是通过指令加载的，那么`loader`为指令输入者，其他情况为为控制台。
 
 ### 引用其他插件类
 一些服务端架构方面的限制导致脚本中无法直接使用内置方法引用其他插件类，此时请使用这个方法获取。

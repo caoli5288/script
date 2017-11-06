@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import javax.script.ScriptEngine;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -89,13 +90,13 @@ public final class ScriptPlugin {
 
     public boolean unload() {
         if (isHandled()) {
-            executor.forEach(i -> i.remove());
+            new ArrayList<>(executor).forEach(HandledExecutor::remove);
             executor = null;
-            task.forEach(i -> i.cancel());
+            new ArrayList<>(task).forEach(HandledTask::cancel);
             task = null;
-            listener.forEach(i -> i.remove());
+            new ArrayList<>(listener).forEach(HandledListener::remove);
             listener = null;
-            placeholder.forEach(i -> i.remove());
+            new ArrayList<>(placeholder).forEach(HandledPlaceholder::remove);
             placeholder = null;
             main.unload(this);
             main = null;

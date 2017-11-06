@@ -39,7 +39,8 @@ public final class Main extends JavaPlugin {
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",
                 ChatColor.GREEN + "shop105595113.taobao.com"));
 
-        int init = EventMapping.INSTANCE.init();// Register build-in event
+        EventMapping mapping = EventMapping.INSTANCE;
+        int init = mapping.init();// Register build-in event
         getLogger().info("Initialized " + init + " build-in event(s)");
 
         getCommand("script").setExecutor(new MainCommand(this, executor));
@@ -78,7 +79,7 @@ public final class Main extends JavaPlugin {
     @SneakyThrows
     protected void load(CommandSender loader, String path, Object arg) throws ScriptPluginException {
         File loadable = new File(getDataFolder(), path);
-        thr(!loadable.isFile() || !isLoaded(loadable), "path not loadable");
+        thr(!loadable.isFile() || isLoaded(loadable), "path not loadable");
 
         load(ScriptLoader.ScriptInfo.builder()
                 .loader(loader)
