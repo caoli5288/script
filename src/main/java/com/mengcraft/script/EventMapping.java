@@ -1,6 +1,7 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.mengcraft.script.util.ArrayHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -11,9 +12,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -141,6 +144,17 @@ public final class EventMapping {
         } catch (InvocationTargetException | IllegalAccessException e) {
             throw new RuntimeException(e.toString());
         }
+    }
+
+    public Object filter(String regex) {
+        List<String> list = new ArrayList<>();
+        Pattern p = Pattern.compile(regex);
+        mapping.forEach((key, value) -> {
+            if (p.matcher(key).matches()) {
+                list.add(key);
+            }
+        });
+        return ArrayHelper.toJSArray(list.toArray());
     }
 
     public static final EventMapping INSTANCE = new EventMapping();
