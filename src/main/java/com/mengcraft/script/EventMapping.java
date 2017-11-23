@@ -137,7 +137,7 @@ public final class EventMapping {
             return (HandlerList) e.invoke(null);
         } catch (NoSuchMethodException e) {
             Class<?> father = clz.getSuperclass();
-            if (valid(father)) {
+            if (Event.class.isAssignableFrom(father)) {
                 return getHandler(father);
             }
             throw new RuntimeException(e.toString());

@@ -1,5 +1,5 @@
 # Script
-Load JavaScript plugin in bukkit server. 
+Load JavaScript plugin in bukkit server. Release under GPLv2.
 
 ## 示例
 一个最简单的有功能的脚本如下例，它将给登陆的玩家发送信息。`description`对象定义了脚本的基本属性（非必须）。对象中的`handle`字段定义了脚本监听的事件。
