@@ -29,7 +29,7 @@ if (arg) {
 如果脚本没有添加指令、事件监听和任务调度等行为，那么该脚本为单次脚本。单次脚本执行后不驻留，因此可以通过指令反复加载。
 
 ### 事件
-这里有另一种更加灵活的方式监听一个事件。你可以随时添加或者去除一个或者多个监听器。
+这里有另一种更加灵活的方式监听一个事件，并且你可以随时添加或者去除一个或者多个监听器。事件名默认小写化处理。
 ```JS
 var description = {
     "author":"mengcraft.com",
@@ -42,20 +42,22 @@ var listener = plugin.addListener("playerjoinevent", function(event) {...})
 listener.remove()
 ```
 
-对于部分第三方插件中的事件，可能需要在监听前进行注册操作。
+对于第三方插件中的事件可能需要在监听前进行注册操作。事件名冲突时请使用插件名作为前置命名空间。
 ```JS
 plugin.mapping.init("AnyPlugin")
-plugin.addListener("AnyPluginEvent", function(event) {...})
-```
 
-如果类加载器未把事件类加载到内存中，可能需要使用类加载器加载。
-```JS
-plugin.mapping.init(java.lang.Class.forName("com.ext.plugin.AnyEvent"))
+plugin.addListener("playerjoinevent", function(event) {
+    plugin.logger.info("build-in event fire")
+})
+
+plugin.addListener("anyplugin:playerjoinevent", function(event) {
+    plugin.logger.info("AnyPlugin's event fire")
+})
 ```
 
 你可以按正则过滤事件，注意事件名使用小写字母。
 ```JS
-plugin.mapping.filter("any.*event").forEach(function (name) {
+plugin.mapping.filter("any(.*)event").forEach(function (name) {
     plugin.addListener(name, function (evt) {...})
 })
 ```
