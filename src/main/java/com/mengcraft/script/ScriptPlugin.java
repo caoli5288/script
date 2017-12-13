@@ -298,7 +298,7 @@ public final class ScriptPlugin {
 
     public boolean setDescription(@NonNull String key, String value) {
         Preconditions.checkState(isHandled(), "unloaded");
-        return description.containsKey(key) && description.put(key, value) == null;
+        return !description.containsKey(key) && description.put(key, value) == null;
     }
 
     @Override

@@ -83,7 +83,7 @@ public class MainCommand implements CommandExecutor {
     }
 
     private boolean list(CommandSender who) {
-        who.sendMessage(ChatColor.GREEN + "> Loaded script");
+        who.sendMessage(ChatColor.GREEN + "> Loaded script(s)");
         for (String l : main.list()) {
             who.sendMessage(ChatColor.GREEN + "- " + l);
         }
