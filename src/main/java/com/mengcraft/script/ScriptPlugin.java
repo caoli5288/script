@@ -2,11 +2,11 @@ package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
-import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.RefHelper;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -20,7 +20,6 @@ import org.bukkit.plugin.Plugin;
 import javax.script.ScriptEngine;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,43 +34,21 @@ import static com.mengcraft.script.Main.nil;
  */
 public final class ScriptPlugin {
 
+    private final String id;
+    private final ScriptDescription description;
+    private final Logger logger;
+    private final Unsafe unsafe;
     private List<HandledPlaceholder> placeholder = new LinkedList<>();
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
     private List<HandledTask> task = new LinkedList<>();
-
-    private final String id;
-    private final ScriptDescription description;
-    private final Logger logger;
-
     private Main main;
     private Runnable unloadHook;
-
-    private final Unsafe unsafe = new Unsafe() {
-
-        @Override
-        public Main getMainPlugin() {
-            return main;
-        }
-
-        public Server getServer() {
-            return main.getServer();
-        }
-
-        public Plugin getPlugin(String id) {
-            return main.getServer().getPluginManager().getPlugin(id);
-        }
-
-        public ScriptEngine getScript(String id) {
-            ScriptLoader.ScriptBinding binding = main.getSBinding(id);
-            return !nil(binding) ? binding.getEngine() : null;
-        }
-    };
-
 
     public ScriptPlugin(Main main, String id) {
         this.id = id;
         this.main = main;
+        unsafe = new Main.UnsafeImpl(main);
         description = new ScriptDescription();
         logger = new ScriptLogger(main, this);
     }
@@ -80,13 +57,13 @@ public final class ScriptPlugin {
         return description.get(key);
     }
 
+    public boolean unload4Idle() {
+        return isIdled() && unload();
+    }
+
     public boolean isIdled() {
         Preconditions.checkState(isHandled(), "unloaded");
         return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && task.isEmpty();
-    }
-
-    public boolean isHandled() {
-        return !nil(main);
     }
 
     public boolean unload() {
@@ -114,8 +91,8 @@ public final class ScriptPlugin {
         return false;
     }
 
-    public boolean unload4Idle() {
-        return isIdled() && unload();
+    public boolean isHandled() {
+        return !nil(main);
     }
 
     public Unsafe getUnsafe() {
@@ -151,15 +128,17 @@ public final class ScriptPlugin {
         main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
     }
 
-    public DependCall depend(String depend, Runnable runnable) {
+    public boolean depend(String depend, Runnable runnable) {
         return depend(ArrayHelper.link(depend), runnable);
     }
 
-    public DependCall depend(List<String> depend, Runnable runnable) {
+    public boolean depend(List<String> depend, Runnable runnable) {
         val call = DependCall.build(depend, runnable, this);
-        if (!call.call()) runTask(call).complete(this::unload4Idle);
+        return call.call();
+    }
 
-        return call;
+    public HandledTask runTask(Runnable runnable) {
+        return runTask(runnable, 0, -1, false);
     }
 
     public HandledTask runTask(@NonNull Runnable runnable, int delay, int period, boolean b) {
@@ -186,10 +165,6 @@ public final class ScriptPlugin {
 
     public HandledTask runTask(Runnable runnable, boolean b) {
         return runTask(runnable, 0, -1, b);
-    }
-
-    public HandledTask runTask(Runnable runnable) {
-        return runTask(runnable, 0, -1, false);
     }
 
     boolean remove(HandledExecutor i) {
@@ -238,16 +213,16 @@ public final class ScriptPlugin {
         return add;
     }
 
+    public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
+        return addExecutor(label, null, executor);
+    }
+
     public HandledExecutor addExecutor(String label, String permission, ScriptExecutor i) {
         Preconditions.checkArgument(!label.equals("script"));
         HandledExecutor handled = new HandledExecutor(this, new Executor(label, permission, i));
         main.addExecutor(handled);
         executor.add(handled);
         return handled;
-    }
-
-    public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
-        return addExecutor(label, null, executor);
     }
 
     public PermissionAttachment addPermission(Player p, String any) {
@@ -346,83 +321,34 @@ public final class ScriptPlugin {
         }
     }
 
-    public static class DependCall implements Runnable {
+    @RequiredArgsConstructor
+    static class DependCall {
 
+        private final ScriptPlugin plugin;
         private final List<String> depend;
-        private Runnable command;
-        private Runnable fail;
-        private boolean called;
+        private final Runnable runner;
 
-        private ScriptPlugin plugin;
-
-        private DependCall(List<String> depend) {
-            this.depend = depend;
-        }
-
-        public void run() {
-            if (!Main.nil(command)) {
-                if (!call()) {
-                    failed();
-                }
-                command = null;
-            }
-        }
-
-        private void failed() {
-            if (Main.nil(fail)) {
-                plugin.logger.info("Ignore depend call with " + depend + " not found");
-            } else {
-                try {
-                    fail.run();
-                } catch (Exception e) {
-                    plugin.logger.log(Level.SEVERE, e.toString(), e);
-                }
-                fail = null;
-            }
-        }
-
-        public void onFail(Runnable fail) {
-            if (!called) {
-                this.fail = fail;
-            }
+        private static DependCall build(List<String> depend, Runnable command, ScriptPlugin plugin) {
+            return new DependCall(plugin, depend, command);
         }
 
         private boolean call() {
-            boolean result = validate();
-            if (result) {
-                try {
-                    command.run();
-                } catch (Exception e) {
-                    plugin.logger.log(Level.SEVERE, e.toString(), e);
-                }
-                called = true;
-            }
-            return result;
+            boolean valid = valid();
+            if (valid) runner.run();
+            return valid;
         }
 
-        private boolean validate() {
-            boolean result = depend.isEmpty();
-            if (!result) {
-                Iterator<String> it = depend.iterator();
-                String i;
-                Plugin p;
-                while (it.hasNext()) {
-                    i = it.next();
-                    p = plugin.unsafe.getPlugin(i);
-                    if (!Main.nil(p) && p.isEnabled()) {
-                        it.remove();
-                    }
+        private boolean valid() {
+            if (depend.isEmpty()) return true;
+            val it = depend.iterator();
+            while (it.hasNext()) {
+                val i = it.next();
+                val p = plugin.unsafe.getPlugin(i);
+                if (!nil(p) && p.isEnabled()) {
+                    it.remove();
                 }
-                result = depend.isEmpty();
             }
-            return result;
-        }
-
-        private static DependCall build(List<String> depend, Runnable command, ScriptPlugin plugin) {
-            DependCall chain = new DependCall(depend);
-            chain.command = command;
-            chain.plugin = plugin;
-            return chain;
+            return depend.isEmpty();
         }
 
     }

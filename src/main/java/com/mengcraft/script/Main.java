@@ -5,16 +5,20 @@ import com.google.common.collect.ImmutableList;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.util.ArrayHelper;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.var;
 import lombok.val;
 import org.bukkit.ChatColor;
+import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import javax.script.ScriptEngine;
 import java.io.File;
 import java.io.FileReader;
 import java.lang.reflect.Field;
@@ -46,6 +50,11 @@ public final class Main extends JavaPlugin {
         getCommand("script").setExecutor(new MainCommand(this, executor));
 
         saveDefaultConfig();
+        getServer().getScheduler().runTask(this, this::load);
+    }
+
+    protected void reload() {
+        onDisable();
         load();
     }
 
@@ -55,11 +64,6 @@ public final class Main extends JavaPlugin {
             i.getValue().getPlugin().unload();
         }
         plugin = null;
-    }
-
-    protected void reload() {
-        onDisable();
-        load();
     }
 
     private void load() {
@@ -88,6 +92,15 @@ public final class Main extends JavaPlugin {
                 .arg(arg).build());
     }
 
+    public static void thr(boolean b, String message) {
+        if (b) throw new IllegalStateException(message);
+    }
+
+    private boolean isLoaded(File file) {
+        String id = "file:" + file.getName();
+        return !nil(lookById(id));
+    }
+
     private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
         ScriptLoader.ScriptBinding binding = loader.load(info);
         ScriptPlugin loaded = binding.getPlugin();
@@ -101,9 +114,15 @@ public final class Main extends JavaPlugin {
         }
     }
 
-    private boolean isLoaded(File file) {
-        String id = "file:" + file.getName();
-        return !nil(lookById(id));
+    public static boolean nil(Object i) {
+        return i == null;
+    }
+
+    ScriptLoader.ScriptBinding lookById(String id) {
+        for (ScriptLoader.ScriptBinding i : plugin.values()) {
+            if (i.toString().equals(id)) return i;
+        }
+        return null;
     }
 
     public ImmutableList<String> list() {
@@ -163,13 +182,6 @@ public final class Main extends JavaPlugin {
         return !nil(binding) && binding.getPlugin().unload();
     }
 
-    ScriptLoader.ScriptBinding lookById(String id) {
-        for (ScriptLoader.ScriptBinding i : plugin.values()) {
-            if (i.toString().equals(id)) return i;
-        }
-        return null;
-    }
-
     public ScriptLoader.ScriptBinding getSBinding(String name) {
         var binding = plugin.get(name);
         if (nil(binding) && name.startsWith("file:")) {
@@ -178,12 +190,27 @@ public final class Main extends JavaPlugin {
         return binding;
     }
 
-    public static void thr(boolean b, String message) {
-        if (b) throw new IllegalStateException(message);
-    }
+    @RequiredArgsConstructor
+    public static class UnsafeImpl implements ScriptPlugin.Unsafe {
 
-    public static boolean nil(Object i) {
-        return i == null;
+        private final Main main;
+
+        public Main getMainPlugin() {
+            return main;
+        }
+
+        public Server getServer() {
+            return main.getServer();
+        }
+
+        public Plugin getPlugin(String id) {
+            return main.getServer().getPluginManager().getPlugin(id);
+        }
+
+        public ScriptEngine getScript(String id) {
+            ScriptLoader.ScriptBinding binding = main.getSBinding(id);
+            return !nil(binding) ? binding.getEngine() : null;
+        }
     }
 
 }
