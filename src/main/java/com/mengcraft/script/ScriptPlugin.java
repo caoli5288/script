@@ -5,6 +5,7 @@ import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.PluginHelper;
 import com.mengcraft.script.util.RefHelper;
 import lombok.NonNull;
 import lombok.SneakyThrows;
@@ -13,11 +14,16 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarFlag;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.Plugin;
 
 import javax.script.ScriptEngine;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -25,10 +31,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.mengcraft.script.Main.nil;
+import static org.bukkit.util.NumberConversions.toInt;
 
 /**
  * Created on 16-10-17.
@@ -49,7 +57,6 @@ public final class ScriptPlugin {
 
     private final Unsafe unsafe = new Unsafe() {
 
-        @Override
         public Main getMainPlugin() {
             return main;
         }
@@ -65,6 +72,17 @@ public final class ScriptPlugin {
         public ScriptEngine getScript(String id) {
             ScriptLoader.ScriptBinding binding = main.getSBinding(id);
             return !nil(binding) ? binding.getEngine() : null;
+        }
+
+        public BossBar createBossBar(String text) {
+            return Bukkit.createBossBar(text, BarColor.WHITE, BarStyle.SOLID);
+        }
+
+        public BossBar createBossBar(String text, Map<String, Object> attribute) {
+            BarColor color = attribute.containsKey("color") ? BarColor.valueOf(String.valueOf(attribute.get("color")).toUpperCase()) : BarColor.WHITE;
+            BarStyle style = attribute.containsKey("style") ? BarStyle.values()[toInt(attribute.get("style"))] : BarStyle.SOLID;
+            BarFlag[] allFlag = attribute.containsKey("flag") ? ((List<String>) attribute.get("flag")).stream().map(name -> BarFlag.valueOf(name.toUpperCase())).toArray(BarFlag[]::new) : new BarFlag[0];
+            return Bukkit.createBossBar(text, color, style, allFlag);
         }
     };
 
@@ -89,7 +107,7 @@ public final class ScriptPlugin {
         return !nil(main);
     }
 
-    public boolean unload() {
+    public synchronized boolean unload() {
         if (isHandled()) {
             new ArrayList<>(executor).forEach(HandledExecutor::remove);
             executor = null;
@@ -263,6 +281,32 @@ public final class ScriptPlugin {
         return attachment;
     }
 
+    public void sendBossBar(Player p, String text, Map<String, Object> attribute, int tick) {
+        sendBossBar(p, unsafe.createBossBar(Formatter.format(p, text), attribute), tick);
+    }
+
+    public void sendBossBar(Player p, String text, int tick) {
+        sendBossBar(p, unsafe.createBossBar(Formatter.format(p, text)), tick);
+    }
+
+    public void sendBossBar(Player p, BossBar bar, int tick) {
+        AtomicInteger letch = new AtomicInteger(tick);
+        bar.setProgress(1);
+        bar.addPlayer(p);
+        bar.show();
+        PluginHelper.run(main, 10, 10, t -> {
+            int i = letch.addAndGet(-10);
+            if (i < 1) {
+                bar.removeAll();
+                bar.hide();
+                t.cancel();
+            } else {
+                double progress = BigDecimal.valueOf(i).divide(BigDecimal.valueOf(tick), 2, 4).doubleValue();
+                bar.setProgress(progress);
+            }
+        });
+    }
+
     public void setUnloadHook(Runnable unloadHook) {
         this.unloadHook = unloadHook;
     }
@@ -280,6 +324,10 @@ public final class ScriptPlugin {
 
     public Logger getLogger() {
         return logger;
+    }
+
+    public String format(Player p, String input) {
+        return Formatter.format(p, input);
     }
 
     public EventMapping getMapping() {
@@ -319,6 +367,10 @@ public final class ScriptPlugin {
         Plugin getPlugin(String id);
 
         ScriptEngine getScript(String id);
+
+        BossBar createBossBar(String text);
+
+        BossBar createBossBar(String text, Map<String, Object> attribute);
     }
 
     public static class Executor {

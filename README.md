@@ -198,14 +198,31 @@ plugin.setUnloadHook(null);
 ```
 
 ### Placeholder
-如果服务器安装有PlaceholderAPI，那么可以很方便的注册placeholder。
+如果服务器安装有PlaceholderAPI，那么可以很方便的注册placeholder以及格式化字符串。
 ```
-val hook = plugin.addPlaceholder("sp", function (p, input) {
+var hook = plugin.addPlaceholder("sp", function (p, input) {
     // sp_any_world -> any|world
     return input[0] + "|" + input[1];
 });
 hook.remove();// remove it
+
+var jeb = plugin.getPlayer("jeb");
+jeb.sendMessage(plugin.format(jeb, "hello, %player_name%"))
 ```
+
+### Boss血条
+该API只适用于1.9版本以上的服务端。文字中的`%placeholder%`将自动替换。
+```
+var norch = plugin.getPlayer("norch");
+plugin.sendBossBar(norch, "hello, %player_name%", 100);// shown 100 tick(s)
+```
+
+亦支持传入任意血条样式描述。
+```
+plugin.sendBossBar(norch, "hello, %player_name%", {color: "red", style: 0, flag: ["darken_sky", "play_boss_music", "create_fog"]}, 100);
+```
+
+参数`color`的取值范围为`["pink", "blue", "red", "green", "yellow", "purple", "white"]`，参数`style`的取值范围为`0-4`。
 
 ### 插件指令
 执行下列权限需要`script.admin`权限。

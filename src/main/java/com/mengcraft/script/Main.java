@@ -8,10 +8,12 @@ import com.mengcraft.script.util.ArrayHelper;
 import lombok.SneakyThrows;
 import lombok.experimental.var;
 import lombok.val;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -42,6 +44,11 @@ public final class Main extends JavaPlugin {
         EventMapping mapping = EventMapping.INSTANCE;
         int init = mapping.init();// Register build-in event
         getLogger().info("Initialized " + init + " build-in event(s)");
+
+        Plugin plugin = Bukkit.getPluginManager().getPlugin("PlaceholderAPI");
+        if (!nil(plugin)) {
+            Formatter.setReplacePlaceholder(true);
+        }
 
         getCommand("script").setExecutor(new MainCommand(this, executor));
 
