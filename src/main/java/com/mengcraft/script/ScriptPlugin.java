@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.PluginHelper;
 import com.mengcraft.script.util.RefHelper;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -12,15 +13,18 @@ import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,7 +65,7 @@ public final class ScriptPlugin {
         return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && task.isEmpty();
     }
 
-    public boolean unload() {
+    public synchronized boolean unload() {
         if (isHandled()) {
             new ArrayList<>(executor).forEach(HandledExecutor::remove);
             executor = null;
@@ -88,10 +92,6 @@ public final class ScriptPlugin {
 
     public boolean isHandled() {
         return !nil(main);
-    }
-
-    public Main.Unsafe getUnsafe() {
-        return main.getUnsafe();
     }
 
     public Player getPlayer(String id) {
@@ -233,6 +233,36 @@ public final class ScriptPlugin {
         return attachment;
     }
 
+    public void sendBossBar(Player p, String text, Map<String, Object> attribute, int tick) {
+        sendBossBar(p, getUnsafe().createBossBar(Formatter.format(p, text), attribute), tick);
+    }
+
+    public void sendBossBar(Player p, BossBar bar, int tick) {
+        AtomicInteger letch = new AtomicInteger(tick);
+        bar.setProgress(1);
+        bar.addPlayer(p);
+        bar.show();
+        PluginHelper.run(main, 10, 10, t -> {
+            int i = letch.addAndGet(-10);
+            if (i < 1) {
+                bar.removeAll();
+                bar.hide();
+                t.cancel();
+            } else {
+                double progress = BigDecimal.valueOf(i).divide(BigDecimal.valueOf(tick), 2, 4).doubleValue();
+                bar.setProgress(progress);
+            }
+        });
+    }
+
+    public Main.Unsafe getUnsafe() {
+        return main.getUnsafe();
+    }
+
+    public void sendBossBar(Player p, String text, int tick) {
+        sendBossBar(p, getUnsafe().createBossBar(Formatter.format(p, text)), tick);
+    }
+
     public void setUnloadHook(Runnable unloadHook) {
         this.unloadHook = unloadHook;
     }
@@ -250,6 +280,10 @@ public final class ScriptPlugin {
 
     public Logger getLogger() {
         return logger;
+    }
+
+    public String format(Player p, String input) {
+        return Formatter.format(p, input);
     }
 
     public EventMapping getMapping() {
@@ -312,10 +346,6 @@ public final class ScriptPlugin {
         private final List<String> depend;
         private final Runnable runner;
 
-        private static DependCall build(List<String> depend, Runnable command, ScriptPlugin plugin) {
-            return new DependCall(plugin, depend, command);
-        }
-
         private boolean call() {
             boolean valid = valid();
             if (valid) runner.run();
@@ -333,6 +363,10 @@ public final class ScriptPlugin {
                 }
             }
             return depend.isEmpty();
+        }
+
+        private static DependCall build(List<String> depend, Runnable command, ScriptPlugin plugin) {
+            return new DependCall(plugin, depend, command);
         }
 
     }
