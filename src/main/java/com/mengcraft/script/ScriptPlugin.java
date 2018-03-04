@@ -12,12 +12,9 @@ import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
-import org.bukkit.plugin.Plugin;
 
-import javax.script.ScriptEngine;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -37,7 +34,6 @@ public final class ScriptPlugin {
     private final String id;
     private final ScriptDescription description;
     private final Logger logger;
-    private final Unsafe unsafe;
     private List<HandledPlaceholder> placeholder = new LinkedList<>();
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
@@ -48,7 +44,6 @@ public final class ScriptPlugin {
     public ScriptPlugin(Main main, String id) {
         this.id = id;
         this.main = main;
-        unsafe = new Main.UnsafeImpl(main);
         description = new ScriptDescription();
         logger = new ScriptLogger(main, this);
     }
@@ -95,8 +90,8 @@ public final class ScriptPlugin {
         return !nil(main);
     }
 
-    public Unsafe getUnsafe() {
-        return unsafe;
+    public Main.Unsafe getUnsafe() {
+        return main.getUnsafe();
     }
 
     public Player getPlayer(String id) {
@@ -285,17 +280,6 @@ public final class ScriptPlugin {
         return id;
     }
 
-    public interface Unsafe {
-
-        Main getMainPlugin();
-
-        Server getServer();
-
-        Plugin getPlugin(String id);
-
-        ScriptEngine getScript(String id);
-    }
-
     public static class Executor {
 
         private final String permission;
@@ -343,7 +327,7 @@ public final class ScriptPlugin {
             val it = depend.iterator();
             while (it.hasNext()) {
                 val i = it.next();
-                val p = plugin.unsafe.getPlugin(i);
+                val p = plugin.getUnsafe().getPlugin(i);
                 if (!nil(p) && p.isEnabled()) {
                     it.remove();
                 }

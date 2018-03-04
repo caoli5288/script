@@ -34,6 +34,7 @@ public final class Main extends JavaPlugin {
     private final Map<String, HandledExecutor> executor = new HashMap<>();
     private Map<String, ScriptLoader.ScriptBinding> plugin;
     private ScriptLoader loader;
+    private Unsafe unsafe;
 
     @Override
     public void onEnable() {
@@ -50,6 +51,8 @@ public final class Main extends JavaPlugin {
         getCommand("script").setExecutor(new MainCommand(this, executor));
 
         saveDefaultConfig();
+        unsafe = new Unsafe(this);
+
         getServer().getScheduler().runTask(this, this::load);
     }
 
@@ -190,8 +193,12 @@ public final class Main extends JavaPlugin {
         return binding;
     }
 
+    public Unsafe getUnsafe() {
+        return unsafe;
+    }
+
     @RequiredArgsConstructor
-    public static class UnsafeImpl implements ScriptPlugin.Unsafe {
+    public static class Unsafe {
 
         private final Main main;
 
