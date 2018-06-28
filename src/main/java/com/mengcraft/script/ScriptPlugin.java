@@ -15,6 +15,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventPriority;
 import org.bukkit.permissions.PermissionAttachment;
 
 import java.math.BigDecimal;
@@ -383,6 +384,17 @@ public final class ScriptPlugin {
 
         public int getPriority() {
             return priority;
+        }
+
+        public EventPriority getEventPriority() {
+            if (priority <= Byte.MIN_VALUE) {
+                return EventPriority.LOWEST;
+            }
+            if (priority >= Byte.MAX_VALUE) {
+                return EventPriority.MONITOR;
+            }
+            int idx = ((priority - Byte.MIN_VALUE) >> 6) + 1;
+            return EventPriority.values()[idx];
         }
 
         public ScriptListener getListener() {

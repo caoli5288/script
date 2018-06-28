@@ -146,12 +146,12 @@ public final class EventMapping {
             this.name = name;
         }
 
-        public boolean valid(Event event) {
-            return event.getClass() == clz;
-        }
-
         public String getName() {
             return name;
+        }
+
+        public Class<?> clazz() {
+            return clz;
         }
 
         private EventListener getListener() {

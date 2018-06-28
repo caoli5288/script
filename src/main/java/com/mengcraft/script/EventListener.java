@@ -1,12 +1,17 @@
 package com.mengcraft.script;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Maps;
+import lombok.val;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.RegisteredListener;
 
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -15,20 +20,22 @@ import java.util.logging.Level;
  */
 public class EventListener implements Listener {
 
-    private final List<HandledListener> list = new ArrayList<>();
-    private final HandlerList handler;
-    private final EventMapping.Mapping mapping;
+    private final EnumMap<EventPriority, RegisteredListener> actually = Maps.newEnumMap(EventPriority.class);
+    private final ArrayListMultimap<EventPriority, HandledListener> handled = ArrayListMultimap.create();
+    private final Class<?> clz;
+    private final String name;
+    private final HandlerList loop;
 
     public EventListener(EventMapping.Mapping mapping) {
-        handler = EventMapping.getHandler(mapping);
-        this.mapping = mapping;
+        clz = mapping.clazz();
+        name = mapping.getName();
+        loop = EventMapping.getHandler(mapping);
     }
 
-    public void handle(Event event) {
-        if (mapping.valid(event)) {
-            int size = list.size();
-            for (int i = 0; i < size; i++) {
-                handle(list.get(i), event);
+    public void handle(Event event, EventPriority priority) {
+        if (clz == event.getClass()) {
+            for (HandledListener l : handled.get(priority)) {
+                handle(l, event);
             }
         }
     }
@@ -37,47 +44,53 @@ public class EventListener implements Listener {
         try {
             listener.getListener().handle(event);
         } catch (Exception e) {
-            listener.getPlugin().getLogger().log(Level.SEVERE, getName(), e);
+            listener.getPlugin().getLogger().log(Level.SEVERE, name(), e);
         }
     }
 
     protected boolean remove(HandledListener listener) {
-        if (list.remove(listener)) {
-            if (list.isEmpty()) {
-                handler.unregister(this);
-            }
-            return true;
+        EventPriority priority = listener.getEventPriority();
+        val container = handled.get(priority);
+        boolean result = container.remove(listener);
+        if (result && container.isEmpty()) {
+            loop.unregister(actually.remove(priority));
         }
-        return false;
+        return result;
     }
 
     public HandledListener add(Main main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
-        HandledListener handled = new HandledListener(this, plugin, listener);
-        if (list.isEmpty()) {
-            handler.register(new RegisteredListener(this, (i, event) ->
-                    handle(event),
-                    EventPriority.NORMAL, main, false)
-            );
-            list.add(handled);
+        HandledListener output = new HandledListener(this, plugin, listener);
+        EventPriority priority = listener.getEventPriority();
+        val container = handled.get(priority);
+        if (container.isEmpty()) {
+            RegisteredListener actuallyListener = new RegisteredListener(this,
+                    (i, event) -> handle(event, priority),
+                    priority,
+                    main,
+                    false);
+            actually.put(priority, actuallyListener);
+            /*
+             * Add to handled list before actually register event listener.
+             */
+            add(container, output);
+            loop.register(actuallyListener);
         } else {
-            add(handled, listener.getPriority());
+            add(container, output);
         }
-        return handled;
+        return output;
     }
 
-    private void add(HandledListener handled, int priority) {
-        int size = list.size();
-        int i = 0;
-        for (; i < size; i++) {
-            if (list.get(i).getPriority() > priority) {
-                size = 0;
-            }
+    private void add(List<HandledListener> container, HandledListener element) {
+        int idx = Collections.binarySearch(container, element, Comparator.comparingInt(HandledListener::priority));
+        if (idx > -1) {
+            container.add(idx, element);
+        } else {
+            container.add(-(idx) - 1, element);
         }
-        list.add(i, handled);
     }
 
-    public String getName() {
-        return mapping.getName();
+    public String name() {
+        return name;
     }
 
 }
