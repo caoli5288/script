@@ -18,7 +18,7 @@ var handle = function handle(event) {
 ```
 
 ### 加载
-插件在启动时自动加载插件根目录下文件名匹配`*.js`的脚本，不匹配或位于子目录的脚本请使用指令`/script load <文件名>`加载。脚本文件名后的字符作为全局变量`arg`传入脚本中，类型为`string[]`。自动加载的脚本`arg`始终为未定义。
+插件在启动时自动加载插件根目录下文件名匹配`*.js`的脚本，不匹配或位于子目录的脚本请使用指令`/script load <文件名> [arg]`加载。脚本文件名后的字符作为全局变量`arg`传入脚本中，类型为`string[]`。自动加载的脚本`arg`始终为未定义。
 ```JS
 if (arg) {
     loader.sendMessage(arg.join(" "));
@@ -42,7 +42,7 @@ var listener = plugin.addListener("playerjoinevent", function(event) {...})
 listener.remove()
 ```
 
-对于第三方插件中的事件可能需要在监听前进行注册操作。事件名冲突时请使用插件名作为前置命名空间。
+第三方插件中的事件需要在监听前进行注册操作。事件名冲突时请使用插件名作为前置命名空间。
 ```JS
 plugin.mapping.init("AnyPlugin")
 
@@ -55,6 +55,11 @@ plugin.addListener("anyplugin:playerjoinevent", function(event) {
 })
 ```
 
+第三个参数可用于指定监听器优先级。该参数默认值为-1，取值范围为[byte.min, byte.max]。
+```JS
+plugin.addListener("playerjoinevent", function(event) {}, 100)
+```
+
 你可以按正则过滤事件，注意事件名使用小写字母。
 ```JS
 plugin.mapping.filter("any(.*)event").forEach(function (name) {
@@ -65,7 +70,7 @@ plugin.mapping.filter("any(.*)event").forEach(function (name) {
 请注意脚本处理事件继承与插件有所区别。例如，插件中监听`EntityDamageEvent`会将该类的子类一并监听，而脚本的监听器对此做了额外处理以确保不会监听到子类。
 
 ### 玩家权限
-可以在脚本中给予玩家权限。权限仅在玩家本次在线过程中有效。插件卸载不会移除权限。
+可以在脚本中给予玩家权限。权限仅在玩家本次在线过程中有效，脚本（插件）卸载时不会自动移除权限。
 ```JS
 var p = plugin.addPermission(plugin.getPlayer("md_5"), "script.admin")
 // do any here
@@ -114,7 +119,7 @@ plugin.broadcast("&1这是第一行消息",
 ```
 
 ### 插件依赖
-脚本加载的时机之于服务器插件加载的时机是不确定的。有些函数的调用必须确保在一些插件加载之后调用，否则可能得到意料之外的结果。
+有些脚本语句的执行必须确保在一些插件加载之后，否则可能得到意料之外的结果。此时可以使用`plugin#depend`函数。
 ```JS
 plugin.depend("Vault", function () {
     var eco = plugin.getService("Economy");
@@ -228,13 +233,13 @@ plugin.sendBossBar(norch, "hello, %player_name%", {color: "red", style: 0, flag:
 执行下列权限需要`script.admin`权限。
 - /script list
     - 列出所有已加载的脚本名。
-- /script load <文件名>
+- /script load <文件名> [arg]
     - 加载指定文件名的脚本。文件名以插件数据目录为相对目录。
 - /script unload <脚本名|file:文件名>
     - 卸载指定名的脚本。脚本名如未在`description`字段定义则为`file:文件名`。
     - 亦可直接使用`file:文件名`。
 - /script reload
-    - 所有已加载的脚本将被卸载，然后加载所有定义在配置中`script`列的脚本。
+    - 所有已加载的脚本将被卸载，然后加载所有需要被自动加载的脚本。
 
 ### 注意
 初次接触js脚本的童鞋注意，脚本可以正确调用`Java`中的重载方法，但是脚本无法声明重载函数，请务必注意。
