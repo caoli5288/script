@@ -43,9 +43,16 @@ public final class Main extends JavaPlugin {
     private Map<String, ScriptLoader.ScriptBinding> plugin;
     private ScriptLoader loader;
     private Unsafe unsafe;
+    private static Main instance;
+
+    public static Main get() {
+        return instance;
+    }
 
     @Override
     public void onEnable() {
+        instance = this;
+
         loader = new ScriptLoader(this);
 
         getServer().getConsoleSender().sendMessage(ArrayHelper.toArray(

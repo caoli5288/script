@@ -3,9 +3,10 @@ package com.mengcraft.script;
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
+import com.mengcraft.script.util.$;
 import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.PluginHelper;
-import com.mengcraft.script.util.RefHelper;
+import com.mengcraft.script.util.Reflector;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -173,7 +174,7 @@ public final class ScriptPlugin {
 
     boolean remove(HandledPlaceholder i) {
         if (placeholder.remove(i)) {
-            val map = (Map) RefHelper.getField(PlaceholderAPI.class, "placeholders");
+            val map = (Map) Reflector.getField(PlaceholderAPI.class, "placeholders");
             return map.remove(i.getId(), i.getHook());
         }
         return false;
@@ -239,21 +240,7 @@ public final class ScriptPlugin {
     }
 
     public void sendBossBar(Player p, BossBar bar, int tick) {
-        AtomicInteger letch = new AtomicInteger(tick);
-        bar.setProgress(1);
-        bar.addPlayer(p);
-        bar.show();
-        PluginHelper.run(main, 10, 10, t -> {
-            int i = letch.addAndGet(-10);
-            if (i < 1) {
-                bar.removeAll();
-                bar.hide();
-                t.cancel();
-            } else {
-                double progress = BigDecimal.valueOf(i).divide(BigDecimal.valueOf(tick), 2, 4).doubleValue();
-                bar.setProgress(progress);
-            }
-        });
+        $.sendBossBar(p, bar, tick);
     }
 
     public Main.Unsafe getUnsafe() {

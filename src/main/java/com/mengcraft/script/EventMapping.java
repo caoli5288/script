@@ -2,6 +2,8 @@ package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.Reflector;
+import lombok.SneakyThrows;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
@@ -13,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -37,6 +40,10 @@ public final class EventMapping {
 
     protected static HandlerList getHandler(Mapping mapping) {
         return getHandler(mapping.clz);
+    }
+
+    public static EventMapping get() {
+        return INSTANCE;
     }
 
     private static HandlerList getHandler(Class<?> clz) {
@@ -114,10 +121,15 @@ public final class EventMapping {
         return init(Bukkit.getPluginManager().getPlugin(plugin));
     }
 
+    @SneakyThrows
     public int init(Plugin plugin) {
         if (list.add(plugin.getName().toLowerCase())) {
             Class<?> clz = plugin.getClass();
             URL path = clz.getProtectionDomain().getCodeSource().getLocation();
+            URLClassLoader ctx = (URLClassLoader) Main.class.getClassLoader();
+            for (URL url : ((URLClassLoader) plugin.getClass().getClassLoader()).getURLs()) {
+                Reflector.invoke(URLClassLoader.class, ctx, "addURL", url);
+            }
             return init(plugin, clz.getClassLoader(), path, "(.*)\\.class");
         }
         return 0;

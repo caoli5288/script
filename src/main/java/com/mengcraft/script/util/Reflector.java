@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Created by on 2017/7/3.
  */
-public enum RefHelper {
+public enum Reflector {
 
     MAPPING;
 
@@ -67,6 +67,16 @@ public enum RefHelper {
         }
         val invokable = getMethodRef(clz(any), method, p);
         return (T) invokable.invoke(any, input);
+    }
+
+    @SneakyThrows
+    public static <T> T invoke(Class what, Object obj, String invoke, Object... arguments) {
+        Class<?>[] p = new Class[arguments.length];
+        for (int i = 0; i < arguments.length; i++) {
+            p[i] = arguments[i].getClass();
+        }
+        val invokable = getMethodRef(what, invoke, p);
+        return (T) invokable.invoke(obj, arguments);
     }
 
     @SneakyThrows
