@@ -3,7 +3,7 @@ package com.mengcraft.script;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.

@@ -58,7 +58,7 @@ public class EventListener implements Listener {
         return result;
     }
 
-    public HandledListener add(Main main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
+    public HandledListener add(ScriptBootstrap main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
         HandledListener output = new HandledListener(this, plugin, listener);
         EventPriority priority = listener.getEventPriority();
         val container = handled.get(priority);

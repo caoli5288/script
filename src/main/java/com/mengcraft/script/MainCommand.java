@@ -7,11 +7,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-25.
@@ -19,9 +20,9 @@ import static com.mengcraft.script.Main.nil;
 public class MainCommand implements CommandExecutor {
 
     private final Map<String, HandledExecutor> executor;
-    private final Main main;
+    private final ScriptBootstrap main;
 
-    MainCommand(Main main, Map<String, HandledExecutor> executor) {
+    MainCommand(ScriptBootstrap main, Map<String, HandledExecutor> executor) {
         this.main = main;
         this.executor = executor;
     }
@@ -90,9 +91,9 @@ public class MainCommand implements CommandExecutor {
         return true;
     }
 
-    private boolean load(CommandSender who, String i, Object arg) {
+    private boolean load(CommandSender who, String load, Object arg) {
         try {
-            main.load(who, i, arg);
+            main.load(who, new File(main.getDataFolder(), load), arg);
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         } catch (IllegalArgumentException | ScriptPluginException e) {

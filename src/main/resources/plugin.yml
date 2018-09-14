@@ -1,5 +1,5 @@
 name: Script
-main: com.mengcraft.script.Main
+main: com.mengcraft.script.ScriptBootstrap
 version: ${project.version}
 author: caoli5288
 website: http://github.com/caoli5288/script/

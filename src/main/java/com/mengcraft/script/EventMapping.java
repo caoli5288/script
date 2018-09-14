@@ -27,7 +27,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.
@@ -126,7 +126,7 @@ public final class EventMapping {
         if (list.add(plugin.getName().toLowerCase())) {
             Class<?> clz = plugin.getClass();
             URL path = clz.getProtectionDomain().getCodeSource().getLocation();
-            URLClassLoader ctx = (URLClassLoader) Main.class.getClassLoader();
+            URLClassLoader ctx = (URLClassLoader) ScriptBootstrap.class.getClassLoader();
             for (URL url : ((URLClassLoader) plugin.getClass().getClassLoader()).getURLs()) {
                 Reflector.invoke(URLClassLoader.class, ctx, "addURL", url);
             }

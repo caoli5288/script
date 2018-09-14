@@ -4,7 +4,7 @@ import com.mengcraft.script.ScriptPlugin;
 
 import javax.script.ScriptException;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.

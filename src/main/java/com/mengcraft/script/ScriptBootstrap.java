@@ -4,10 +4,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
+import com.mengcraft.script.plugin.ScriptingLoader;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.Named;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.experimental.var;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -24,6 +25,7 @@ import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import javax.script.ScriptEngine;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileReader;
 import java.lang.reflect.Field;
@@ -37,15 +39,15 @@ import static org.bukkit.util.NumberConversions.toInt;
 /**
  * Created on 16-10-17.
  */
-public final class Main extends JavaPlugin {
+public final class ScriptBootstrap extends JavaPlugin {
 
     private final Map<String, HandledExecutor> executor = new HashMap<>();
-    private Map<String, ScriptLoader.ScriptBinding> plugin;
+    private Map<String, Object> plugin;
     private ScriptLoader loader;
     private Unsafe unsafe;
-    private static Main instance;
+    private static ScriptBootstrap instance;
 
-    public static Main get() {
+    public static ScriptBootstrap get() {
         return instance;
     }
 
@@ -73,46 +75,60 @@ public final class Main extends JavaPlugin {
         saveDefaultConfig();
         unsafe = new Unsafe(this);
 
-        getServer().getScheduler().runTask(this, this::load);
+        getServer().getScheduler().runTask(this, this::loadAll);
     }
 
     protected void reload() {
         onDisable();
-        load();
+        loadAll();
     }
 
     @Override
+    @SneakyThrows
     public void onDisable() {
-        for (Map.Entry<String, ScriptLoader.ScriptBinding> i : new HashMap<>(plugin).entrySet()) {
-            i.getValue().getPlugin().unload();
+        for (Map.Entry<String, Object> i : new HashMap<>(plugin).entrySet()) {
+            ((Closeable) i.getValue()).close();
         }
         plugin = null;
     }
 
-    private void load() {
+    private void loadAll() {
         plugin = new HashMap<>();
-        for (String l : getDataFolder().list()) {
-            val i = new File(getDataFolder(), l);
-            if (i.isFile() && l.matches(".+\\.js")) {
+        for (File obj : getDataFolder().listFiles()) {
+            if (obj.isFile() && obj.getName().matches(".+\\.js")) {
                 try {
-                    load(getServer().getConsoleSender(), l, null);
+                    load(getServer().getConsoleSender(), obj, null);
                 } catch (ScriptPluginException e) {
                     getLogger().log(Level.WARNING, e.getMessage());
                 }
+            } else if (obj.isDirectory() && new File(obj, "plugin.js").isFile()) {
+                loadEx(obj);
             }
         }
     }
 
-    @SneakyThrows
-    protected void load(CommandSender loader, String path, Object arg) throws ScriptPluginException {
-        File loadable = new File(getDataFolder(), path);
-        thr(!loadable.isFile() || isLoaded(loadable), "path not loadable");
+    private void loadEx(File obj) {
+        ScriptingLoader scripting = new ScriptingLoader(obj);
+        if (plugin.containsKey(scripting.getName())) {
+            getLogger().warning(String.format("!!! name conflict between %s and %s", scripting.getId(), ((Named) plugin.get(scripting.getName())).getId()));
+        } else {
+            plugin.put(scripting.getName(), scripting);
+            Bukkit.getPluginManager().enablePlugin(scripting);
+        }
+    }
 
-        load(ScriptLoader.ScriptInfo.builder()
-                .loader(loader)
-                .id("file:" + path)
-                .contend(new FileReader(loadable))
-                .arg(arg).build());
+    @SneakyThrows
+    protected void load(CommandSender loader, File obj, Object arg) throws ScriptPluginException {
+        if (obj.isDirectory() && new File(obj, "plugin.js").isFile()) {
+            loadEx(obj);
+        } else {
+            thr(!obj.isFile() || isLoaded(obj), "path not loadable");
+            load(ScriptLoader.ScriptInfo.builder()
+                    .loader(loader)
+                    .id("file:" + obj)
+                    .contend(new FileReader(obj))
+                    .arg(arg).build());
+        }
     }
 
     public static void thr(boolean b, String message) {
@@ -129,9 +145,9 @@ public final class Main extends JavaPlugin {
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
-            ScriptLoader.ScriptBinding i = plugin.get(name);
+            Named i = (Named) plugin.get(name);
             if (!nil(i)) {
-                ScriptPluginException.thr(loaded, "Name conflict with " + i.getPlugin());
+                ScriptPluginException.thr(loaded, "Name conflict with " + i.getId());
             }
             plugin.put(name, binding);
         }
@@ -141,9 +157,12 @@ public final class Main extends JavaPlugin {
         return i == null;
     }
 
-    ScriptLoader.ScriptBinding lookById(String id) {
-        for (ScriptLoader.ScriptBinding i : plugin.values()) {
-            if (i.toString().equals(id)) return i;
+    Named lookById(String id) {
+        for (Object obj : plugin.values()) {
+            Named named = (Named) obj;
+            if (named.getId().equals(id)) {
+                return named;
+            }
         }
         return null;
     }
@@ -196,21 +215,33 @@ public final class Main extends JavaPlugin {
     boolean unload(ScriptPlugin i) {
         String id = i.getDescription("name");
         if (nil(id)) return false;
-        ScriptLoader.ScriptBinding binding = plugin.get(id);
+        Object obj = plugin.get(id);
+        ScriptLoader.ScriptBinding binding = obj instanceof ScriptLoader.ScriptBinding ? (ScriptLoader.ScriptBinding) obj : null;
         return !nil(binding) && binding.getPlugin() == i && plugin.remove(id, binding);
     }
 
+    public void unload(ScriptingLoader scripting) {
+        if (plugin.remove(scripting.getName(), scripting)) {
+            Bukkit.getPluginManager().disablePlugin(scripting);
+        }
+    }
+
+    @SneakyThrows
     boolean unload(String id) {
+        if (plugin.containsKey(id)) {
+            ((Closeable) plugin.get(id)).close();
+            return true;
+        }
         val binding = getSBinding(id);
         return !nil(binding) && binding.getPlugin().unload();
     }
 
     public ScriptLoader.ScriptBinding getSBinding(String name) {
-        var binding = plugin.get(name);
+        Object binding = plugin.get(name);
         if (nil(binding) && name.startsWith("file:")) {
             binding = lookById(name);
         }
-        return binding;
+        return binding instanceof ScriptLoader.ScriptBinding ? (ScriptLoader.ScriptBinding) binding : null;
     }
 
     public Unsafe getUnsafe() {
@@ -220,9 +251,9 @@ public final class Main extends JavaPlugin {
     @RequiredArgsConstructor
     public static class Unsafe {
 
-        private final Main main;
+        private final ScriptBootstrap main;
 
-        public Main getMainPlugin() {
+        public ScriptBootstrap getMainPlugin() {
             return main;
         }
 

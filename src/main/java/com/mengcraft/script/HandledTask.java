@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.UUID;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.

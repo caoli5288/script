@@ -1,6 +1,6 @@
 package com.mengcraft.script.util;
 
-import com.mengcraft.script.Main;
+import com.mengcraft.script.ScriptBootstrap;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 
@@ -14,7 +14,7 @@ public class $ {
         bar.setProgress(1);
         bar.addPlayer(p);
         bar.show();
-        PluginHelper.run(Main.get(), 10, 10, t -> {
+        PluginHelper.run(ScriptBootstrap.get(), 10, 10, t -> {
             int i = letch.addAndGet(-10);
             if (i < 1) {
                 bar.removeAll();

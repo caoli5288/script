@@ -3,8 +3,10 @@ package com.mengcraft.script.plugin;
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Formatter;
-import com.mengcraft.script.Main;
+import com.mengcraft.script.ScriptBootstrap;
+import com.mengcraft.script.util.Named;
 import lombok.Data;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
@@ -26,14 +28,17 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.UnknownDependencyException;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,18 +46,23 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-@Data
-public class ScriptingLoader extends PluginBase implements PluginLoader {
+@Getter
+public class ScriptingLoader extends PluginBase implements PluginLoader, Named, Closeable {
+
+    public ScriptingLoader(File dataFolder) {
+        this.dataFolder = dataFolder;
+        description = getPluginDescription(new File(dataFolder, "plugin.yml"));
+        jsFile = new File(dataFolder, "plugin.js");
+    }
 
     private final File dataFolder;
-    private final File jsFile = new File(dataFolder, "plugin.js");
 
     @Override
     public File getDataFolder() {
         return dataFolder;
     }
 
-    private final PluginDescriptionFile description = getPluginDescription(new File(dataFolder, "plugin.yml"));
+    private final PluginDescriptionFile description;
 
     @Override
     public PluginDescriptionFile getDescription() {
@@ -149,7 +159,8 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
 
     }
 
-    private final ScriptEngine js = new ScriptEngineManager(Main.class.getClassLoader()).getEngineByExtension("js");
+    private final ScriptEngine js = new ScriptEngineManager(ScriptBootstrap.class.getClassLoader()).getEngineByExtension("js");
+    private final File jsFile;
 
     @Override
     @SneakyThrows
@@ -192,6 +203,8 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
         return null;
     }
 
+    //===== Scripting Plugin Loader
+
     @Override
     public Plugin loadPlugin(File js) throws UnknownDependencyException {
         if (jsFile.equals(js)) {
@@ -200,13 +213,17 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
         return null;
     }
 
+    private static Yaml yaml = new Yaml();
+
     @Override
     @SneakyThrows
-    public PluginDescriptionFile getPluginDescription(File yml) {
-        if (yml.isFile()) {
-            return new PluginDescriptionFile(new FileInputStream(yml));
+    public PluginDescriptionFile getPluginDescription(File ymlFile) {
+        if (ymlFile.isFile()) {
+            Map<String, Object> obj = yaml.load(new FileInputStream(ymlFile));
+            obj.put("main", "plugin.js");
+            return new PluginDescriptionFile(new StringReader(yaml.dump(obj)));
         }
-        return new PluginDescriptionFile(String.valueOf(dataFolder), "0.1.0", dataFolder + "/plugin.js");
+        return new PluginDescriptionFile(dataFolder.getName(), "0.1.0", "plugin.js");
     }
 
     static Pattern[] pluginFileFilters = new Pattern[]{Pattern.compile("plugin\\.js")};
@@ -218,7 +235,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
 
     @Override
     public Map<Class<? extends Event>, Set<RegisteredListener>> createRegisteredListeners(Listener listener, Plugin plugin) {
-        return Main.get().getPluginLoader().createRegisteredListeners(listener, plugin);
+        return ScriptBootstrap.get().getPluginLoader().createRegisteredListeners(listener, plugin);
     }
 
     private Server server = Bukkit.getServer();
@@ -252,7 +269,23 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
         }
     }
 
-    //===== Add-on
+    //===== Internal
+
+    @Override
+    public String getId() {
+        return "plugin:" + jsFile;
+    }
+
+    @Override
+    public void close() {
+        unload();
+    }
+
+    //===== Scripting Logic
+
+    public void unload() {
+        ScriptBootstrap.get().unload(this);
+    }
 
     public void depend(String plugname, boolean ignore) {
         Plugin plugin = Bukkit.getPluginManager().getPlugin(plugname);
@@ -269,7 +302,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
 
     @SneakyThrows
     public Class loadType(String clazz) {
-        return Main.class.getClassLoader().loadClass(clazz);
+        return ScriptBootstrap.class.getClassLoader().loadClass(clazz);
     }
 
     public String format(Player p, String input) {
@@ -280,6 +313,14 @@ public class ScriptingLoader extends PluginBase implements PluginLoader {
         for (String line : input) {
             Bukkit.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', line));
         }
+    }
+
+    public void runCommand(String command) {
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), ChatColor.translateAlternateColorCodes('&', command));
+    }
+
+    public void runCommand(Player p, String command) {
+        p.chat("/" + Formatter.format(p, command));
     }
 
 }

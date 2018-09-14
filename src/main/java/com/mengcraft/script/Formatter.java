@@ -9,8 +9,6 @@ import org.bukkit.entity.Player;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.mengcraft.script.Main.nil;
-
 public class Formatter {
 
     private static final Pattern PATTERN = Pattern.compile("\\$\\{(?<lab>[^${}]+)\\}");

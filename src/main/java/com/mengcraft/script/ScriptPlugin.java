@@ -5,7 +5,7 @@ import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.$;
 import com.mengcraft.script.util.ArrayHelper;
-import com.mengcraft.script.util.PluginHelper;
+import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Reflector;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -19,23 +19,22 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.permissions.PermissionAttachment;
 
-import java.math.BigDecimal;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.
  */
-public final class ScriptPlugin {
+public final class ScriptPlugin implements Named, Closeable {
 
     private final String id;
     private final ScriptDescription description;
@@ -44,10 +43,10 @@ public final class ScriptPlugin {
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
     private List<HandledTask> task = new LinkedList<>();
-    private Main main;
+    private ScriptBootstrap main;
     private Runnable unloadHook;
 
-    public ScriptPlugin(Main main, String id) {
+    public ScriptPlugin(ScriptBootstrap main, String id) {
         this.id = id;
         this.main = main;
         description = new ScriptDescription();
@@ -123,6 +122,10 @@ public final class ScriptPlugin {
     public void runCommand(String str) {
         logger.info("Run console command " + str);
         main.getServer().dispatchCommand(main.getServer().getConsoleSender(), str);
+    }
+
+    public void runCommand(Player p, String command) {
+        p.chat("/" + Formatter.format(p, command));
     }
 
     public boolean depend(String depend, Runnable runnable) {
@@ -243,7 +246,7 @@ public final class ScriptPlugin {
         $.sendBossBar(p, bar, tick);
     }
 
-    public Main.Unsafe getUnsafe() {
+    public ScriptBootstrap.Unsafe getUnsafe() {
         return main.getUnsafe();
     }
 
@@ -298,8 +301,22 @@ public final class ScriptPlugin {
         return getId();
     }
 
+    @Override
     public String getId() {
         return id;
+    }
+
+    //===== Internal
+
+
+    @Override
+    public void close() {
+        unload();
+    }
+
+    @Override
+    public String getName() {
+        return getDescription("name");
     }
 
     public static class Executor {

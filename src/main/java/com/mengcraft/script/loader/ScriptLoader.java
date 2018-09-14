@@ -1,29 +1,32 @@
 package com.mengcraft.script.loader;
 
 import com.mengcraft.script.EventMapping;
-import com.mengcraft.script.Main;
+import com.mengcraft.script.ScriptBootstrap;
 import com.mengcraft.script.ScriptListener;
 import com.mengcraft.script.ScriptPlugin;
+import com.mengcraft.script.util.Named;
 import lombok.Builder;
+import lombok.experimental.Delegate;
 import org.bukkit.command.CommandSender;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.io.Closeable;
 import java.io.Reader;
 import java.util.Map;
 
-import static com.mengcraft.script.Main.nil;
+import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.
  */
 public class ScriptLoader {
 
-    private final Main main;
+    private final ScriptBootstrap main;
 
-    public ScriptLoader(Main main) {
+    public ScriptLoader(ScriptBootstrap main) {
         this.main = main;
     }
 
@@ -93,8 +96,9 @@ public class ScriptLoader {
         private Object arg;
     }
 
-    public final static class ScriptBinding {
+    public final static class ScriptBinding implements Closeable, Named {
 
+        @Delegate(types = Named.class)
         private final ScriptPlugin plugin;
         private final ScriptEngine engine;
 
@@ -114,6 +118,11 @@ public class ScriptLoader {
         @Override
         public String toString() {
             return plugin.getId();
+        }
+
+        @Override
+        public void close() {
+            plugin.unload();
         }
 
         private static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {
