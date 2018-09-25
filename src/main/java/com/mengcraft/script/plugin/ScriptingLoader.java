@@ -30,6 +30,7 @@ import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.UnknownDependencyException;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.script.Bindings;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -159,16 +160,17 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
 
     }
 
-    private final ScriptEngine js = new ScriptEngineManager(ScriptBootstrap.class.getClassLoader()).getEngineByExtension("js");
     private final File jsFile;
 
     @Override
     @SneakyThrows
     public void onEnable() {
-        Object global = js.eval("this");
-        Object jsObject = js.eval("Object");
-        ((Invocable) js).invokeMethod(jsObject, "bindProperties", global, this);
-        js.eval(new FileReader(jsFile));
+        ScriptEngine ctx = ScriptBootstrap.get().jsEngine();
+        Bindings bindings = ctx.createBindings();
+        Object global = ctx.eval("this", bindings);
+        Object jsObject = ctx.eval("Object", bindings);
+        ((Invocable) ctx).invokeMethod(jsObject, "bindProperties", global, this);
+        ctx.eval(new FileReader(jsFile), bindings);
     }
 
     private boolean naggable;
