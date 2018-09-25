@@ -20,6 +20,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.permissions.PermissionAttachment;
 
 import java.io.Closeable;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -275,6 +276,10 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public String format(Player p, String input) {
         return Formatter.format(p, input);
+    }
+
+    public Object require(String path) {
+        return ScriptBootstrap.require(ScriptBootstrap.get().jsEngine(), new File(ScriptBootstrap.get().getDataFolder(), path));
     }
 
     public EventMapping getMapping() {

@@ -281,6 +281,10 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         unload();
     }
 
+    public Object require(String path) {
+        return ScriptBootstrap.require(ScriptBootstrap.get().jsEngine(), new File(dataFolder, path));
+    }
+
     //===== Scripting Logic
 
     public void unload() {
