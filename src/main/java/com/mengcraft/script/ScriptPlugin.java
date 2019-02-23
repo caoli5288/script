@@ -279,7 +279,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     public Object require(String path) {
-        return ScriptBootstrap.require(ScriptBootstrap.get().jsEngine(), new File(ScriptBootstrap.get().getDataFolder(), path));
+        return ScriptBootstrap.require(new File(ScriptBootstrap.get().getDataFolder(), path));
     }
 
     public EventMapping getMapping() {

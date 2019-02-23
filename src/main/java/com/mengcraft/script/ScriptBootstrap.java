@@ -45,35 +45,39 @@ import static org.bukkit.util.NumberConversions.toInt;
  */
 public final class ScriptBootstrap extends JavaPlugin {
 
+    private static ScriptBootstrap plugin;
+    private Map<String, Object> scripts;
+    private ScriptEngine jsEngine;
     private final Map<String, HandledExecutor> executor = new HashMap<>();
-    private Map<String, Object> plugin;
-    private ScriptLoader loader;
+    private ScriptLoader scriptLoader;
     private Unsafe unsafe;
-    private final ThreadLocal<ScriptEngine> jsEngine = ThreadLocal.withInitial(() -> new ScriptEngineManager().getEngineByExtension("js"));
-    private static ScriptBootstrap instance;
 
     public static ScriptBootstrap get() {
-        return instance;
+        return plugin;
     }
 
     @SneakyThrows
-    public static Object require(ScriptEngine ctx, File jsFile) {
+    public static Object require(File jsFile) {
+        ScriptEngine ctx = jsEngine();
         Bindings bindings = ctx.createBindings();
         ctx.eval("exports = {}", bindings);
         ctx.eval(Files.newReader(jsFile, StandardCharsets.UTF_8), bindings);
         return ctx.eval("exports", bindings);
     }
 
-    public ScriptEngine jsEngine() {
-        return jsEngine.get();
+    public static ScriptEngine jsEngine() {
+        return plugin.jsEngine;
+    }
+
+    @Override
+    public void onLoad() {
+        plugin = this;
+        jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByExtension("js");
     }
 
     @Override
     public void onEnable() {
-        instance = this;
-
-        loader = new ScriptLoader(this);
-
+        scriptLoader = new ScriptLoader();
         getServer().getConsoleSender().sendMessage(ArrayHelper.toArray(
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",
                 ChatColor.GREEN + "shop105595113.taobao.com"));
@@ -103,14 +107,14 @@ public final class ScriptBootstrap extends JavaPlugin {
     @Override
     @SneakyThrows
     public void onDisable() {
-        for (Map.Entry<String, Object> i : new HashMap<>(plugin).entrySet()) {
+        for (Map.Entry<String, Object> i : new HashMap<>(scripts).entrySet()) {
             ((Closeable) i.getValue()).close();
         }
-        plugin = null;
+        scripts = null;
     }
 
     private void loadAll() {
-        plugin = new HashMap<>();
+        scripts = new HashMap<>();
         for (File obj : getDataFolder().listFiles()) {
             if (obj.isFile() && obj.getName().matches(".+\\.js")) {
                 try {
@@ -126,10 +130,10 @@ public final class ScriptBootstrap extends JavaPlugin {
 
     private void loadEx(File obj) {
         ScriptingLoader scripting = new ScriptingLoader(obj);
-        if (plugin.containsKey(scripting.getName())) {
-            getLogger().warning(String.format("!!! name conflict between %s and %s", scripting.getId(), ((Named) plugin.get(scripting.getName())).getId()));
+        if (scripts.containsKey(scripting.getName())) {
+            getLogger().warning(String.format("!!! name conflict between %s and %s", scripting.getId(), ((Named) scripts.get(scripting.getName())).getId()));
         } else {
-            plugin.put(scripting.getName(), scripting);
+            scripts.put(scripting.getName(), scripting);
             Bukkit.getPluginManager().enablePlugin(scripting);
         }
     }
@@ -158,15 +162,15 @@ public final class ScriptBootstrap extends JavaPlugin {
     }
 
     private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
-        ScriptLoader.ScriptBinding binding = loader.load(info);
+        ScriptLoader.ScriptBinding binding = scriptLoader.load(info);
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
-            Named i = (Named) plugin.get(name);
+            Named i = (Named) scripts.get(name);
             if (!nil(i)) {
                 ScriptPluginException.thr(loaded, "Name conflict with " + i.getId());
             }
-            plugin.put(name, binding);
+            scripts.put(name, binding);
         }
     }
 
@@ -175,7 +179,7 @@ public final class ScriptBootstrap extends JavaPlugin {
     }
 
     Named lookById(String id) {
-        for (Object obj : plugin.values()) {
+        for (Object obj : scripts.values()) {
             Named named = (Named) obj;
             if (named.getId().equals(id)) {
                 return named;
@@ -185,7 +189,7 @@ public final class ScriptBootstrap extends JavaPlugin {
     }
 
     public ImmutableList<String> list() {
-        return ImmutableList.copyOf(plugin.keySet());
+        return ImmutableList.copyOf(scripts.keySet());
     }
 
     @SuppressWarnings("unchecked")
@@ -232,21 +236,21 @@ public final class ScriptBootstrap extends JavaPlugin {
     boolean unload(ScriptPlugin i) {
         String id = i.getDescription("name");
         if (nil(id)) return false;
-        Object obj = plugin.get(id);
+        Object obj = scripts.get(id);
         ScriptLoader.ScriptBinding binding = obj instanceof ScriptLoader.ScriptBinding ? (ScriptLoader.ScriptBinding) obj : null;
-        return !nil(binding) && binding.getPlugin() == i && plugin.remove(id, binding);
+        return !nil(binding) && binding.getPlugin() == i && scripts.remove(id, binding);
     }
 
     public void unload(ScriptingLoader scripting) {
-        if (plugin.remove(scripting.getName(), scripting)) {
+        if (scripts.remove(scripting.getName(), scripting)) {
             Bukkit.getPluginManager().disablePlugin(scripting);
         }
     }
 
     @SneakyThrows
     boolean unload(String id) {
-        if (plugin.containsKey(id)) {
-            ((Closeable) plugin.get(id)).close();
+        if (scripts.containsKey(id)) {
+            ((Closeable) scripts.get(id)).close();
             return true;
         }
         val binding = getSBinding(id);
@@ -254,7 +258,7 @@ public final class ScriptBootstrap extends JavaPlugin {
     }
 
     public ScriptLoader.ScriptBinding getSBinding(String name) {
-        Object binding = plugin.get(name);
+        Object binding = scripts.get(name);
         if (nil(binding) && name.startsWith("file:")) {
             binding = lookById(name);
         }
@@ -282,9 +286,9 @@ public final class ScriptBootstrap extends JavaPlugin {
             return main.getServer().getPluginManager().getPlugin(id);
         }
 
-        public ScriptEngine getScript(String id) {
+        public Object getScript(String id) {
             ScriptLoader.ScriptBinding binding = main.getSBinding(id);
-            return !nil(binding) ? binding.getEngine() : null;
+            return !nil(binding) ? binding.getScriptObj() : null;
         }
 
         public BossBar createBossBar(String text) {

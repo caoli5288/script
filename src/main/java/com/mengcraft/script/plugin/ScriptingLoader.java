@@ -33,7 +33,6 @@ import org.yaml.snakeyaml.Yaml;
 import javax.script.Bindings;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -165,7 +164,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
     @Override
     @SneakyThrows
     public void onEnable() {
-        ScriptEngine ctx = ScriptBootstrap.get().jsEngine();
+        ScriptEngine ctx = ScriptBootstrap.jsEngine();
         Bindings bindings = ctx.createBindings();
         Object global = ctx.eval("this", bindings);
         Object jsObject = ctx.eval("Object", bindings);
@@ -284,7 +283,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
     }
 
     public Object require(String path) {
-        return ScriptBootstrap.require(ScriptBootstrap.get().jsEngine(), new File(dataFolder, path));
+        return ScriptBootstrap.require(new File(dataFolder, path));
     }
 
     //===== Scripting Logic
