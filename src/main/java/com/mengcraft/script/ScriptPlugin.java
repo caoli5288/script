@@ -5,6 +5,7 @@ import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.$;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Reflector;
 import lombok.NonNull;
@@ -14,9 +15,10 @@ import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.PermissionAttachment;
 
 import java.io.Closeable;
@@ -243,7 +245,7 @@ public final class ScriptPlugin implements Named, Closeable {
         sendBossBar(p, getUnsafe().createBossBar(Formatter.format(p, text), attribute), tick);
     }
 
-    public void sendBossBar(Player p, BossBar bar, int tick) {
+    public void sendBossBar(Player p, BossBarWrapper bar, int tick) {
         $.sendBossBar(p, bar, tick);
     }
 
@@ -253,6 +255,19 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public void sendBossBar(Player p, String text, int tick) {
         sendBossBar(p, getUnsafe().createBossBar(Formatter.format(p, text)), tick);
+    }
+
+    public void setMetadata(Player player, String key, Object value) {
+        player.setMetadata(key, new FixedMetadataValue(main, value));
+    }
+
+    public Object getMetadata(Player player, String key) {
+        for (MetadataValue metadataValue : player.getMetadata(key)) {
+            if (metadataValue.getOwningPlugin() == main) {
+                return metadataValue.value();
+            }
+        }
+        return null;
     }
 
     public void setUnloadHook(Runnable unloadHook) {

@@ -7,6 +7,7 @@ import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.plugin.ScriptingLoader;
 import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -287,15 +288,15 @@ public final class ScriptBootstrap extends JavaPlugin {
             return !nil(binding) ? binding.getEngine() : null;
         }
 
-        public BossBar createBossBar(String text) {
-            return Bukkit.createBossBar(text, BarColor.WHITE, BarStyle.SOLID);
+        public BossBarWrapper createBossBar(String text) {
+            return new BossBarWrapper(Bukkit.createBossBar(text, BarColor.WHITE, BarStyle.SOLID));
         }
 
-        public BossBar createBossBar(String text, Map<String, Object> attribute) {
+        public BossBarWrapper createBossBar(String text, Map<String, Object> attribute) {
             BarColor color = attribute.containsKey("color") ? BarColor.valueOf(String.valueOf(attribute.get("color")).toUpperCase()) : BarColor.WHITE;
             BarStyle style = attribute.containsKey("style") ? BarStyle.values()[toInt(attribute.get("style"))] : BarStyle.SOLID;
             BarFlag[] allFlag = attribute.containsKey("flag") ? ((List<String>) attribute.get("flag")).stream().map(name -> BarFlag.valueOf(name.toUpperCase())).toArray(BarFlag[]::new) : new BarFlag[0];
-            return Bukkit.createBossBar(text, color, style, allFlag);
+            return new BossBarWrapper(Bukkit.createBossBar(text, color, style, allFlag));
         }
 
     }

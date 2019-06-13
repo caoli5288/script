@@ -22,6 +22,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginBase;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -327,6 +329,19 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
 
     public void runCommand(Player p, String command) {
         p.chat("/" + Formatter.format(p, command));
+    }
+
+    public void setMetadata(Player player, String key, Object value) {
+        player.setMetadata(key, new FixedMetadataValue(this, value));
+    }
+
+    public Object getMetadata(Player player, String key) {
+        for (MetadataValue metadataValue : player.getMetadata(key)) {
+            if (metadataValue.getOwningPlugin() == this) {
+                return metadataValue.value();
+            }
+        }
+        return null;
     }
 
 }

@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class $ {
 
-    public static void sendBossBar(Player p, BossBar bar, int tick) {
+    public static void sendBossBar(Player p, BossBarWrapper bar, int tick) {
         AtomicInteger letch = new AtomicInteger(tick);
         bar.setProgress(1);
         bar.addPlayer(p);
