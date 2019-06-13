@@ -9,9 +9,10 @@ import lombok.Builder;
 import lombok.experimental.Delegate;
 import org.bukkit.command.CommandSender;
 
+import javax.script.Bindings;
 import javax.script.Invocable;
+import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.io.Closeable;
 import java.io.Reader;
@@ -24,37 +25,38 @@ import static com.mengcraft.script.ScriptBootstrap.nil;
  */
 public class ScriptLoader {
 
-    private final ScriptBootstrap main;
-
-    public ScriptLoader(ScriptBootstrap main) {
-        this.main = main;
-    }
-
     @SuppressWarnings("unchecked")
     public ScriptBinding load(ScriptInfo info) throws ScriptPluginException {
-        ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-        ScriptPlugin plugin = new ScriptPlugin(main, info.id);
-        engine.put("plugin", plugin);
-        engine.put("arg", info.arg);
-        engine.put("loader", info.loader);
+        ScriptBootstrap bootstrap = ScriptBootstrap.get();
+        ScriptPlugin plugin = new ScriptPlugin(bootstrap, info.id);
+        ScriptEngine ctx = ScriptBootstrap.jsEngine();
+        Bindings bindings = ctx.getBindings(ScriptContext.ENGINE_SCOPE);
+        ctx.setBindings(ctx.createBindings(), ScriptContext.ENGINE_SCOPE);
+        ctx.put("plugin", plugin);
+        ctx.put("arg", info.arg);
+        ctx.put("loader", info.loader);
+        Object scriptObj = null;
         try {
-            engine.eval(info.contend);
+            ctx.eval(info.contend);
+            scriptObj = ctx.eval("this");
         } catch (ScriptException e) {
+            ctx.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
             ScriptPluginException.thr(plugin, e.getMessage());
         }
-        Object description = engine.get("description");
-        if (Map.class.isInstance(description)) {
+        Object description = ctx.get("description");
+        if (description instanceof Map) {
             plugin.setDescription((Map) description);
             if (nil(plugin.getDescription("name"))) {
                 plugin.setDescription("name", info.id);
             }
-            loadListener(plugin, engine);
-            main.getLogger().info(load(plugin));
+            loadListener(plugin, ctx);
+            bootstrap.getLogger().info(load(plugin));
         } else {
             plugin.setDescription("name", info.id);
-            main.getLogger().info("Load script " + info.id);
+            bootstrap.getLogger().info("Load script " + info.id);
         }
-        return ScriptBinding.bind(plugin, engine);
+        ctx.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
+        return ScriptBinding.bind(plugin, scriptObj);
     }
 
     private static String load(ScriptPlugin plugin) {
@@ -73,18 +75,14 @@ public class ScriptLoader {
         return b.toString();
     }
 
-    private static void loadListener(ScriptPlugin plugin, ScriptEngine engine) {
+    private static void loadListener(ScriptPlugin plugin, ScriptEngine ctx) {
         String handle = plugin.getDescription("handle");
         if (!nil(handle) && EventMapping.INSTANCE.initialized(handle)) {
-            ScriptListener listener = getInterface(engine, ScriptListener.class);
+            ScriptListener listener = ((Invocable) ctx).getInterface(ScriptListener.class);
             if (!nil(listener)) {
                 plugin.addListener(handle, listener);
             }
         }
-    }
-
-    private static <T> T getInterface(ScriptEngine engine, Class<T> i) {
-        return Invocable.class.cast(engine).getInterface(i);
     }
 
     @Builder
@@ -100,19 +98,19 @@ public class ScriptLoader {
 
         @Delegate(types = Named.class)
         private final ScriptPlugin plugin;
-        private final ScriptEngine engine;
+        private final Object scriptObj;
 
-        private ScriptBinding(ScriptPlugin plugin, ScriptEngine engine) {
+        private ScriptBinding(ScriptPlugin plugin, Object scriptObj) {
             this.plugin = plugin;
-            this.engine = engine;
+            this.scriptObj = scriptObj;
         }
 
         public ScriptPlugin getPlugin() {
             return plugin;
         }
 
-        public ScriptEngine getEngine() {
-            return engine;
+        public Object getScriptObj() {
+            return scriptObj;
         }
 
         @Override
@@ -125,8 +123,8 @@ public class ScriptLoader {
             plugin.unload();
         }
 
-        private static ScriptBinding bind(ScriptPlugin plugin, ScriptEngine engine) {
-            return new ScriptBinding(plugin, engine);
+        private static ScriptBinding bind(ScriptPlugin plugin, Object scriptObj) {
+            return new ScriptBinding(plugin, scriptObj);
         }
 
     }
