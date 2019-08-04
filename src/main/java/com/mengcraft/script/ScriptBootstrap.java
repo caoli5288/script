@@ -18,7 +18,6 @@ import org.bukkit.Server;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
@@ -83,9 +82,8 @@ public final class ScriptBootstrap extends JavaPlugin {
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",
                 ChatColor.GREEN + "shop105595113.taobao.com"));
 
-        EventMapping mapping = EventMapping.INSTANCE;
-        int init = mapping.init();// Register build-in event
-        getLogger().info("Initialized " + init + " build-in event(s)");
+        EventMapping.INSTANCE.loadClasses();// Register build-in event
+        getLogger().info("Initialized " + (EventMapping.INSTANCE.getKnownClasses().size() / 2) + " build-in event(s)");
 
         Plugin plugin = Bukkit.getPluginManager().getPlugin("PlaceholderAPI");
         if (!nil(plugin)) {

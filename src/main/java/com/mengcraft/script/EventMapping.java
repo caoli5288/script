@@ -1,8 +1,13 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import com.google.common.io.Files;
 import com.mengcraft.script.util.ArrayHelper;
-import com.mengcraft.script.util.Reflector;
+import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.bukkit.Bukkit;
@@ -15,13 +20,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -35,8 +38,98 @@ import static com.mengcraft.script.ScriptBootstrap.nil;
 public final class EventMapping {
 
     public static final EventMapping INSTANCE = new EventMapping();
-    private final Map<String, Mapping> mapping = new HashMap<>();
-    private final Set<String> list = new HashSet<>();
+    private final Map<String, Mapping> mapping = Maps.newHashMap();
+    private final Set<String> plugins = Sets.newHashSet();
+    private final Multimap<String, Binding> knownClasses = ArrayListMultimap.create();
+
+    public Multimap<String, Binding> getKnownClasses() {
+        return knownClasses;
+    }
+
+    public boolean initialized(String name) {
+        return mapping.containsKey(name.toLowerCase());
+    }
+
+    @SneakyThrows
+    public EventListener getListener(String name) {
+        name = name.toLowerCase();
+        if (mapping.containsKey(name)) {
+            return mapping.get(name).getListener();
+        }
+        if (!knownClasses.containsKey(name)) {
+            throw new IllegalStateException("event not found & initialized");
+        }
+        for (Binding binding : knownClasses.get(name)) {
+                Class<?> loadedClass = Class.forName(binding.getFullName(), true, binding.getLoader());
+                if (isEventClass(loadedClass)) {
+                    loadEventClass(binding.getPlugin(), loadedClass);
+                }
+        }
+        return Objects.requireNonNull(mapping.get(name), "event not found & initialized").getListener();// NPE
+    }
+
+    protected void loadClasses() {
+        URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
+        loadClasses(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
+    }
+
+    protected void loadClasses(Plugin plugin, ClassLoader loader, URL path, String regex) {
+        Preconditions.checkArgument(path.getProtocol().equals("file"));
+        Pattern pattern = Pattern.compile(regex);
+        try {
+            JarFile ball = new JarFile(path.getFile());
+            Enumeration<JarEntry> all = ball.entries();
+            while (all.hasMoreElements()) {
+                JarEntry element = all.nextElement();
+                if (pattern.matcher(element.getName()).matches()) {
+                    loadEntry(plugin, loader, element);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    private void loadEntry(Plugin plugin, ClassLoader loader, JarEntry element) {
+        Binding binding = Binding.create(plugin, loader, element.getName());
+        String name = Files.getNameWithoutExtension(element.getName()).toLowerCase();
+        knownClasses.put(name, binding);
+        knownClasses.put(String.format("%s:%s", plugin == null ? "bukkit" : plugin.getName().toLowerCase(), name), binding);
+    }
+
+    protected void loadEventClass(Plugin plugin, Class<?> clz) {
+        Preconditions.checkArgument(isEventClass(clz), clz.getName() + " not valid");
+        val label = clz.getSimpleName().toLowerCase();
+        val value = new Mapping(label, clz);
+        if (!mapping.containsKey(label)) {
+            mapping.put(label, value);
+        }
+        mapping.put((plugin == null ? "bukkit" : plugin.getName().toLowerCase()) + ':' + label, value);
+    }
+
+    public void init(String plugin) {
+        init(Bukkit.getPluginManager().getPlugin(plugin));
+    }
+
+    @SneakyThrows
+    public void init(Plugin plugin) {
+        if (plugins.add(plugin.getName().toLowerCase())) {
+            Class<?> pluginClass = plugin.getClass();
+            URL path = pluginClass.getProtectionDomain().getCodeSource().getLocation();
+            loadClasses(plugin, pluginClass.getClassLoader(), path, "(.*)\\.class");
+        }
+    }
+
+    public Object filter(String regex) {// Export to scripts
+        List<String> list = new ArrayList<>();
+        Pattern p = Pattern.compile(regex);
+        mapping.forEach((key, value) -> {
+            if (p.matcher(key).matches()) {
+                list.add(key);
+            }
+        });
+        return ArrayHelper.toJSArray(list.toArray());
+    }
 
     protected static HandlerList getHandler(Mapping mapping) {
         return getHandler(mapping.clz);
@@ -62,88 +155,20 @@ public final class EventMapping {
         }
     }
 
-    public boolean initialized(String name) {
-        return mapping.containsKey(name.toLowerCase());
-    }
-
-    public EventListener getListener(String name) {
-        String id = name.toLowerCase();
-        Preconditions.checkState(mapping.containsKey(id));
-        return mapping.get(id).getListener();
-    }
-
-    protected int init() {
-        URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
-        return init(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
-    }
-
-    private int init(Plugin plugin, ClassLoader loader, URL path, String regex) {
-        Preconditions.checkArgument(path.getProtocol().equals("file"));
-        Pattern pattern = Pattern.compile(regex);
-        int i = mapping.size();
-        try {
-            JarFile ball = new JarFile(path.getFile());
-            Enumeration<JarEntry> all = ball.entries();
-            while (all.hasMoreElements()) {
-                JarEntry element = all.nextElement();
-                if (pattern.matcher(element.getName()).matches()) init(plugin, loader, element);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage());
-        }
-        return mapping.size() - i;
-    }
-
-    private void init(Plugin plugin, ClassLoader loader, JarEntry element) {
-        try {
-            String i = element.getName().replace('/', '.');
-            Class<?> clz = loader.loadClass(i.substring(0, i.length() - 6));
-            if (valid(clz)) init(plugin, clz);
-        } catch (NoClassDefFoundError | ClassNotFoundException i) {
-        }
-    }
-
-    private static boolean valid(Class<?> clz) {
+    public static boolean isEventClass(Class<?> clz) {
         return Event.class.isAssignableFrom(clz) && Modifier.isPublic(clz.getModifiers()) && !Modifier.isAbstract(clz.getModifiers());
     }
 
-    public void init(Plugin plugin, Class<?> clz) {
-        Preconditions.checkArgument(valid(clz), clz.getName() + " not valid");
-        val label = clz.getSimpleName().toLowerCase();
-        val value = new Mapping(label, clz);
-        if (!mapping.containsKey(label)) {
-            mapping.put(label, value);
+    @Data
+    protected static class Binding {
+
+        private final Plugin plugin;
+        private final ClassLoader loader;
+        private final String fullName;
+
+        public static Binding create(Plugin plugin, ClassLoader classLoader, String pathName) {
+            return new Binding(plugin, classLoader, pathName.replace('/', '.').substring(0, pathName.length() -6));
         }
-        mapping.put((plugin == null ? "bukkit" : plugin.getName().toLowerCase()) + ':' + label, value);
-    }
-
-    public int init(String plugin) {
-        return init(Bukkit.getPluginManager().getPlugin(plugin));
-    }
-
-    @SneakyThrows
-    public int init(Plugin plugin) {
-        if (list.add(plugin.getName().toLowerCase())) {
-            Class<?> clz = plugin.getClass();
-            URL path = clz.getProtectionDomain().getCodeSource().getLocation();
-            URLClassLoader ctx = (URLClassLoader) ScriptBootstrap.class.getClassLoader();
-            for (URL url : ((URLClassLoader) plugin.getClass().getClassLoader()).getURLs()) {
-                Reflector.invoke(URLClassLoader.class, ctx, "addURL", url);
-            }
-            return init(plugin, clz.getClassLoader(), path, "(.*)\\.class");
-        }
-        return 0;
-    }
-
-    public Object filter(String regex) {
-        List<String> list = new ArrayList<>();
-        Pattern p = Pattern.compile(regex);
-        mapping.forEach((key, value) -> {
-            if (p.matcher(key).matches()) {
-                list.add(key);
-            }
-        });
-        return ArrayHelper.toJSArray(list.toArray());
     }
 
     public final static class Mapping {
