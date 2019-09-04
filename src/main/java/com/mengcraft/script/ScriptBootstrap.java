@@ -30,7 +30,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileReader;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -43,7 +42,7 @@ import static org.bukkit.util.NumberConversions.toInt;
 /**
  * Created on 16-10-17.
  */
-public final class ScriptBootstrap extends JavaPlugin {
+public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
     private static ScriptBootstrap plugin;
     private Map<String, Object> scripts;
@@ -53,6 +52,10 @@ public final class ScriptBootstrap extends JavaPlugin {
     private Unsafe unsafe;
 
     public static ScriptBootstrap get() {
+        return plugin;
+    }
+
+    public static IScriptSpi getSpi() {
         return plugin;
     }
 
@@ -138,16 +141,16 @@ public final class ScriptBootstrap extends JavaPlugin {
     }
 
     @SneakyThrows
-    protected void load(CommandSender loader, File obj, Object arg) throws ScriptPluginException {
+    protected void load(CommandSender loader, File obj, Object args) throws ScriptPluginException {
         if (obj.isDirectory() && new File(obj, "plugin.js").isFile()) {
             loadEx(obj);
         } else {
             thr(!obj.isFile() || isLoaded(obj), "path not loadable");
-            load(ScriptLoader.ScriptInfo.builder()
+            loadScript(ScriptLoader.ScriptInfo.builder()
                     .loader(loader)
                     .id("file:" + obj)
-                    .contend(new FileReader(obj))
-                    .arg(arg).build());
+                    .contend(Files.toString(obj, StandardCharsets.UTF_8))
+                    .args(args).build());
         }
     }
 
@@ -160,7 +163,8 @@ public final class ScriptBootstrap extends JavaPlugin {
         return !nil(lookById(id));
     }
 
-    private void load(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
+    @Override
+    public ScriptLoader.ScriptBinding loadScript(ScriptLoader.ScriptInfo info) throws ScriptPluginException {
         ScriptLoader.ScriptBinding binding = scriptLoader.load(info);
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
@@ -171,6 +175,7 @@ public final class ScriptBootstrap extends JavaPlugin {
             }
             scripts.put(name, binding);
         }
+        return binding;
     }
 
     public static boolean nil(Object i) {
@@ -252,11 +257,11 @@ public final class ScriptBootstrap extends JavaPlugin {
             ((Closeable) scripts.get(id)).close();
             return true;
         }
-        val binding = getSBinding(id);
+        val binding = getScript(id);
         return !nil(binding) && binding.getPlugin().unload();
     }
 
-    public ScriptLoader.ScriptBinding getSBinding(String name) {
+    public ScriptLoader.ScriptBinding getScript(String name) {
         Object binding = scripts.get(name);
         if (nil(binding) && name.startsWith("file:")) {
             binding = lookById(name);
@@ -273,10 +278,6 @@ public final class ScriptBootstrap extends JavaPlugin {
 
         private final ScriptBootstrap main;
 
-        public ScriptBootstrap getMainPlugin() {
-            return main;
-        }
-
         public Server getServer() {
             return main.getServer();
         }
@@ -286,7 +287,7 @@ public final class ScriptBootstrap extends JavaPlugin {
         }
 
         public Object getScript(String id) {
-            ScriptLoader.ScriptBinding binding = main.getSBinding(id);
+            ScriptLoader.ScriptBinding binding = main.getScript(id);
             return !nil(binding) ? binding.getScriptObj() : null;
         }
 

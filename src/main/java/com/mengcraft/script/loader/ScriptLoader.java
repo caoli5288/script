@@ -5,6 +5,7 @@ import com.mengcraft.script.ScriptBootstrap;
 import com.mengcraft.script.ScriptListener;
 import com.mengcraft.script.ScriptPlugin;
 import com.mengcraft.script.util.Named;
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import lombok.Builder;
 import lombok.experimental.Delegate;
 import org.bukkit.command.CommandSender;
@@ -33,7 +34,8 @@ public class ScriptLoader {
         Bindings bindings = ctx.getBindings(ScriptContext.ENGINE_SCOPE);
         ctx.setBindings(ctx.createBindings(), ScriptContext.ENGINE_SCOPE);
         ctx.put("plugin", plugin);
-        ctx.put("arg", info.arg);
+        ctx.put("args", info.args);
+        ctx.put("arg", info.args);// Compatible codes
         ctx.put("loader", info.loader);
         Object scriptObj = null;
         try {
@@ -90,8 +92,8 @@ public class ScriptLoader {
 
         private CommandSender loader;
         private String id;
-        private Reader contend;
-        private Object arg;
+        private String contend;
+        private Object args;
     }
 
     public final static class ScriptBinding implements Closeable, Named {
@@ -109,8 +111,8 @@ public class ScriptLoader {
             return plugin;
         }
 
-        public Object getScriptObj() {
-            return scriptObj;
+        public ScriptObjectMirror getScriptObj() {
+            return (ScriptObjectMirror) scriptObj;
         }
 
         @Override
