@@ -3,6 +3,7 @@ package com.mengcraft.script;
 import lombok.EqualsAndHashCode;
 import org.bukkit.event.EventPriority;
 
+import java.util.Comparator;
 import java.util.UUID;
 
 /**
@@ -13,21 +14,23 @@ public class HandledListener {
 
     private final UUID id = UUID.randomUUID();// Use random id to func
     private final ScriptListener listener;
-    private final EventListener up;
+    private final EventListener managedListener;
     private final int priority;
     private final ScriptPlugin plugin;
     private final EventPriority eventPriority;
 
-    public HandledListener(EventListener up, ScriptPlugin plugin, ScriptPlugin.Listener i) {
-        this.up = up;
+    public HandledListener(EventListener managedListener, ScriptPlugin plugin, ScriptPlugin.Listener i) {
+        this.managedListener = managedListener;
         this.plugin = plugin;
         listener = i.getListener();
         priority = i.getPriority();
         eventPriority = i.getEventPriority();
     }
 
-    public boolean remove() {
-        return plugin.remove(this) && up.remove(this);
+    public void remove() {
+        if (plugin.remove(this)) {
+            managedListener.remove(this);
+        }
     }
 
     public ScriptListener getListener() {
@@ -44,6 +47,10 @@ public class HandledListener {
 
     public int priority() {
         return priority;
+    }
+
+    public static Comparator<HandledListener> comparator() {
+        return Comparator.comparingInt(HandledListener::priority);
     }
 
 }

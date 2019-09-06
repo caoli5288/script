@@ -1,16 +1,16 @@
 package com.mengcraft.script;
 
-import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import lombok.val;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.EventExecutor;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -20,21 +20,20 @@ import java.util.logging.Level;
  */
 public class EventListener implements Listener {
 
-    private final EnumMap<EventPriority, RegisteredListener> actually = Maps.newEnumMap(EventPriority.class);
-    private final ArrayListMultimap<EventPriority, HandledListener> handled = ArrayListMultimap.create();
+    private final EnumMap<EventPriority, Handled> handledExecutors = Maps.newEnumMap(EventPriority.class);
     private final Class<?> clz;
     private final String name;
-    private final HandlerList loop;
+    private final HandlerList handlerList;
 
     public EventListener(EventMapping.Mapping mapping) {
         clz = mapping.clazz();
         name = mapping.getName();
-        loop = EventMapping.getHandler(mapping);
+        handlerList = EventMapping.getHandler(mapping);
     }
 
     public void handle(Event event, EventPriority priority) {
         if (clz == event.getClass()) {
-            for (HandledListener l : handled.get(priority)) {
+            for (HandledListener l : handledExecutors.get(priority).executors) {
                 handle(l, event);
             }
         }
@@ -48,49 +47,57 @@ public class EventListener implements Listener {
         }
     }
 
-    protected boolean remove(HandledListener listener) {
+    protected void remove(HandledListener listener) {
         EventPriority priority = listener.getEventPriority();
-        val container = handled.get(priority);
-        boolean result = container.remove(listener);
-        if (result && container.isEmpty()) {
-            loop.unregister(actually.remove(priority));
+        Handled handled = handledExecutors.get(priority);
+        if (handled.remove(listener) == 0) {
+            handlerList.unregister(handled);
         }
-        return result;
     }
 
     public HandledListener add(ScriptBootstrap main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
+        Handled handled = handledExecutors.computeIfAbsent(listener.getEventPriority(), priority -> new Handled(this,
+                (_this, event) -> handle(event, priority),
+                priority,
+                main,
+                false));
+        if (handled.isEmpty()) {
+            handlerList.register(handled);
+        }
         HandledListener output = new HandledListener(this, plugin, listener);
-        EventPriority priority = listener.getEventPriority();
-        val container = handled.get(priority);
-        if (container.isEmpty()) {
-            RegisteredListener actuallyListener = new RegisteredListener(this,
-                    (i, event) -> handle(event, priority),
-                    priority,
-                    main,
-                    false);
-            actually.put(priority, actuallyListener);
-            /*
-             * Add to handled list before actually register event listener.
-             */
-            add(container, output);
-            loop.register(actuallyListener);
-        } else {
-            add(container, output);
-        }
+        handled.add(output);
         return output;
-    }
-
-    private void add(List<HandledListener> container, HandledListener element) {
-        int idx = Collections.binarySearch(container, element, Comparator.comparingInt(HandledListener::priority));
-        if (idx > -1) {
-            container.add(idx, element);
-        } else {
-            container.add(-(idx) - 1, element);
-        }
     }
 
     public String name() {
         return name;
+    }
+
+    protected static class Handled extends RegisteredListener {
+
+        private final List<HandledListener> executors = Lists.newArrayList();
+
+        public Handled(Listener listener, EventExecutor executor, EventPriority priority, Plugin plugin, boolean ignoreCancelled) {
+            super(listener, executor, priority, plugin, ignoreCancelled);
+        }
+
+        public int add(HandledListener e) {
+            int index = Collections.binarySearch(executors, e, HandledListener.comparator());
+            executors.add(index <= -1 ? -(index) - 1 : index, e);
+            return executors.size();
+        }
+
+        /**
+         * @return Handled executors size
+         */
+        public int remove(HandledListener e) {
+            executors.remove(e);
+            return executors.size();
+        }
+
+        public boolean isEmpty() {
+            return executors.isEmpty();
+        }
     }
 
 }
