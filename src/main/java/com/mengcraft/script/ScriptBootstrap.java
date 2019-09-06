@@ -24,6 +24,7 @@ import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.json.simple.JSONValue;
 
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
@@ -60,12 +61,19 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     }
 
     @SneakyThrows
-    public static Object require(File jsFile) {
-        ScriptEngine ctx = jsEngine();
-        Bindings bindings = ctx.createBindings();
-        ctx.eval("exports = {}", bindings);
-        ctx.eval(Files.newReader(jsFile, StandardCharsets.UTF_8), bindings);
-        return ctx.eval("exports", bindings);
+    public static Object require(File required) {
+        switch (Files.getFileExtension(required.getName())) {
+            case "js":
+                ScriptEngine ctx = jsEngine();
+                Bindings bindings = ctx.createBindings();
+                ctx.eval("exports = {}", bindings);
+                ctx.eval(Files.newReader(required, StandardCharsets.UTF_8), bindings);
+                return ctx.eval("exports", bindings);
+            case "json":
+                return JSONValue.parse(Files.newReader(required, StandardCharsets.UTF_8));
+            default:
+                return required;
+        }
     }
 
     public static ScriptEngine jsEngine() {

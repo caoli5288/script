@@ -96,6 +96,24 @@ var exec = plugin.addExecutor(...)
 exec.remove()
 ```
 
+### 加载资源
+
+脚本中可以使用`require`函数加载资源文件。如果将要被加载的文件是一个`js`文件，那么该文件会被解释并返回它的`exports`字段。如果将要被加载的文件是`json`文件，那么将返回它被解析后的内容。除此之外的情况将返回文件的引用。
+
+```js
+# lib/math.js
+exports.min = function min(i, j) {
+    return i < j ? i : j;
+}
+
+# main.js
+var math = plugin.require("lib/math.js")
+math.min(0, 1) // Returns 0
+
+var config = plugin.require("config.json")
+var name = config.player.name
+```
+
 ### 服务
 加载服务是可能的，并且比Java插件中的做法更为简单。但是你无法在脚本中提供一个服务。
 ```JS
