@@ -20,7 +20,7 @@ import java.util.logging.Level;
  */
 public class EventListener implements Listener {
 
-    private final EnumMap<EventPriority, Handled> handledExecutors = Maps.newEnumMap(EventPriority.class);
+    private final EnumMap<EventPriority, HandledRegisteredListener> handledExecutors = Maps.newEnumMap(EventPriority.class);
     private final Class<?> clz;
     private final String name;
     private final HandlerList handlerList;
@@ -49,14 +49,14 @@ public class EventListener implements Listener {
 
     protected void remove(HandledListener listener) {
         EventPriority priority = listener.getEventPriority();
-        Handled handled = handledExecutors.get(priority);
+        HandledRegisteredListener handled = handledExecutors.get(priority);
         if (handled.remove(listener) == 0) {
             handlerList.unregister(handled);
         }
     }
 
     public HandledListener add(ScriptBootstrap main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
-        Handled handled = handledExecutors.computeIfAbsent(listener.getEventPriority(), priority -> new Handled(this,
+        HandledRegisteredListener handled = handledExecutors.computeIfAbsent(listener.getEventPriority(), priority -> new HandledRegisteredListener(this,
                 (_this, event) -> handle(event, priority),
                 priority,
                 main,
@@ -64,7 +64,11 @@ public class EventListener implements Listener {
         if (handled.isEmpty()) {
             handlerList.register(handled);
         }
-        HandledListener output = new HandledListener(this, plugin, listener);
+        HandledListener output = new HandledListener(this,
+                plugin,
+                listener.getListener(),
+                listener.getPriority(),
+                handled.getPriority());
         handled.add(output);
         return output;
     }
@@ -73,11 +77,11 @@ public class EventListener implements Listener {
         return name;
     }
 
-    protected static class Handled extends RegisteredListener {
+    static class HandledRegisteredListener extends RegisteredListener {
 
         private final List<HandledListener> executors = Lists.newArrayList();
 
-        public Handled(Listener listener, EventExecutor executor, EventPriority priority, Plugin plugin, boolean ignoreCancelled) {
+        private HandledRegisteredListener(Listener listener, EventExecutor executor, EventPriority priority, Plugin plugin, boolean ignoreCancelled) {
             super(listener, executor, priority, plugin, ignoreCancelled);
         }
 

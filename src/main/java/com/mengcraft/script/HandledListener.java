@@ -19,12 +19,12 @@ public class HandledListener {
     private final ScriptPlugin plugin;
     private final EventPriority eventPriority;
 
-    public HandledListener(EventListener managedListener, ScriptPlugin plugin, ScriptPlugin.Listener i) {
+    public HandledListener(EventListener managedListener, ScriptPlugin plugin, ScriptListener listener, int priority, EventPriority eventPriority) {
         this.managedListener = managedListener;
         this.plugin = plugin;
-        listener = i.getListener();
-        priority = i.getPriority();
-        eventPriority = i.getEventPriority();
+        this.listener = listener;
+        this.priority = priority;
+        this.eventPriority = eventPriority;
     }
 
     public void remove() {

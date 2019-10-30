@@ -414,11 +414,19 @@ public final class ScriptPlugin implements Named, Closeable {
             if (priority <= Byte.MIN_VALUE) {
                 return EventPriority.LOWEST;
             }
-            if (priority >= Byte.MAX_VALUE) {
-                return EventPriority.MONITOR;
+            if (priority <= -64) {
+                return EventPriority.LOW;
             }
-            int idx = ((priority - Byte.MIN_VALUE) >> 6) + 1;
-            return EventPriority.values()[idx];
+            if (priority <= -1) {
+                return EventPriority.NORMAL;
+            }
+            if (priority <= 63) {
+                return EventPriority.HIGH;
+            }
+            if (priority <= Byte.MAX_VALUE) {
+                return EventPriority.HIGHEST;
+            }
+            return EventPriority.MONITOR;
         }
 
         public ScriptListener getListener() {
