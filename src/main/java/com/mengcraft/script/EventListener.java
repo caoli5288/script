@@ -2,18 +2,18 @@ package com.mengcraft.script;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mengcraft.script.util.Utils;
 import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.EventExecutor;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
@@ -21,7 +21,7 @@ import java.util.logging.Level;
  */
 public class EventListener implements Listener {
 
-    private final EnumMap<EventPriority, HandledRegisteredListener> handledExecutors = Maps.newEnumMap(EventPriority.class);
+    private final EnumMap<EventPriority, CustomRegisteredListener> handledExecutors = Maps.newEnumMap(EventPriority.class);
     private final Class<?> clz;
     private final String name;
     @Getter
@@ -33,45 +33,27 @@ public class EventListener implements Listener {
         handlerList = EventMapping.getHandler(mapping);
     }
 
-    public void handle(Event event, EventPriority priority) {
-        if (clz == event.getClass()) {
-            for (HandledListener l : handledExecutors.get(priority).executors) {
-                handle(l, event);
-            }
-        }
-    }
-
-    private void handle(HandledListener listener, Event event) {
-        try {
-            listener.getListener().accept(event);
-        } catch (Exception e) {
-            listener.getPlugin().getLogger().log(Level.SEVERE, name(), e);
-        }
-    }
-
     protected void remove(HandledListener listener) {
         EventPriority priority = listener.getEventPriority();
-        HandledRegisteredListener handled = handledExecutors.get(priority);
-        if (handled.remove(listener) == 0) {
-            handlerList.unregister(handled);
+        CustomRegisteredListener custom = handledExecutors.get(priority);
+        custom.remove(listener);
+        if (custom.isEmpty()) {
+            handlerList.unregister(custom);
         }
     }
 
-    public HandledListener add(ScriptBootstrap main, ScriptPlugin plugin, ScriptPlugin.Listener listener) {
-        HandledRegisteredListener handled = handledExecutors.computeIfAbsent(listener.getEventPriority(), priority -> new HandledRegisteredListener(this,
-                (_this, event) -> handle(event, priority),
-                priority,
-                main,
-                false));
-        if (handled.isEmpty()) {
-            handlerList.register(handled);
+    public HandledListener add(ScriptPlugin script, Consumer<Event> executor, int order) {
+        CustomRegisteredListener custom = handledExecutors.computeIfAbsent(Utils.getEventPriority(order),
+                priority -> new CustomRegisteredListener(priority, false));
+        if (custom.isEmpty()) {
+            handlerList.register(custom);
         }
         HandledListener output = new HandledListener(this,
-                plugin,
-                listener.getListener(),
-                listener.getPriority(),
-                handled.getPriority());
-        handled.add(output);
+                script,
+                executor,
+                order,
+                custom.getPriority());
+        custom.add(output);
         return output;
     }
 
@@ -79,26 +61,38 @@ public class EventListener implements Listener {
         return name;
     }
 
-    static class HandledRegisteredListener extends RegisteredListener {
+    public Listener asListener() {
+        return this;
+    }
+
+    private class CustomRegisteredListener extends RegisteredListener {
 
         private final List<HandledListener> executors = Lists.newArrayList();
 
-        private HandledRegisteredListener(Listener listener, EventExecutor executor, EventPriority priority, Plugin plugin, boolean ignoreCancelled) {
-            super(listener, executor, priority, plugin, ignoreCancelled);
+        private CustomRegisteredListener(EventPriority priority, boolean ignoreCancelled) {
+            super(asListener(), null, priority, ScriptBootstrap.get(), ignoreCancelled);
         }
 
-        public int add(HandledListener e) {
+        @Override
+        public void callEvent(Event event) {
+            if (clz == event.getClass()) {
+                for (HandledListener listener : executors) {
+                    try {
+                        listener.getExecutor().accept(event);
+                    } catch (Exception e) {
+                        listener.getPlugin().getLogger().log(Level.SEVERE, name(), e);
+                    }
+                }
+            }
+        }
+
+        private void add(HandledListener e) {
             int index = Collections.binarySearch(executors, e, HandledListener.comparator());
             executors.add(index <= -1 ? -(index) - 1 : index, e);
-            return executors.size();
         }
 
-        /**
-         * @return Handled executors size
-         */
-        public int remove(HandledListener e) {
+        public void remove(HandledListener e) {
             executors.remove(e);
-            return executors.size();
         }
 
         public boolean isEmpty() {

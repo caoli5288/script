@@ -15,16 +15,16 @@ import java.util.function.Consumer;
 public class HandledListener {
 
     private final UUID id = UUID.randomUUID();// Use random id to func
-    private final Consumer<Event> listener;
+    private final Consumer<Event> executor;
     private final EventListener managedListener;
     private final int priority;
     private final ScriptPlugin plugin;
     private final EventPriority eventPriority;
 
-    public HandledListener(EventListener managedListener, ScriptPlugin plugin, Consumer<Event> listener, int priority, EventPriority eventPriority) {
+    public HandledListener(EventListener managedListener, ScriptPlugin plugin, Consumer<Event> executor, int priority, EventPriority eventPriority) {
         this.managedListener = managedListener;
         this.plugin = plugin;
-        this.listener = listener;
+        this.executor = executor;
         this.priority = priority;
         this.eventPriority = eventPriority;
     }
@@ -35,8 +35,8 @@ public class HandledListener {
         }
     }
 
-    public Consumer<Event> getListener() {
-        return listener;
+    public Consumer<Event> getExecutor() {
+        return executor;
     }
 
     public ScriptPlugin getPlugin() {

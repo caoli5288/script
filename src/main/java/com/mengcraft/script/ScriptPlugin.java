@@ -17,7 +17,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
-import org.bukkit.event.EventPriority;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.PermissionAttachment;
@@ -42,10 +41,10 @@ public final class ScriptPlugin implements Named, Closeable {
     private final String id;
     private final ScriptDescription description;
     private final Logger logger;
-    private List<HandledPlaceholder> placeholder = new LinkedList<>();
-    private List<HandledExecutor> executor = new LinkedList<>();
-    private List<HandledListener> listener = new LinkedList<>();
-    private List<HandledTask> tasks = new LinkedList<>();
+    private LinkedList<HandledPlaceholder> placeholders = new LinkedList<>();
+    private LinkedList<HandledExecutor> commands = new LinkedList<>();
+    private LinkedList<HandledListener> listeners = new LinkedList<>();
+    private LinkedList<HandledTask> tasks = new LinkedList<>();
     private ScriptBootstrap main;
     private Runnable unloadHook;
 
@@ -66,19 +65,19 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public boolean isIdled() {
         Preconditions.checkState(isHandled(), "unloaded");
-        return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && tasks.isEmpty();
+        return placeholders.isEmpty() && commands.isEmpty() && listeners.isEmpty() && tasks.isEmpty();
     }
 
     public synchronized boolean unload() {
         if (isHandled()) {
-            new ArrayList<>(executor).forEach(HandledExecutor::remove);
-            executor = null;
-            new ArrayList<>(tasks).forEach(HandledTask::cancel);
+            while (!commands.isEmpty()) commands.peek().remove();
+            commands = null;
+            while (!tasks.isEmpty()) tasks.peek().cancel();
             tasks = null;
-            new ArrayList<>(listener).forEach(HandledListener::remove);
-            listener = null;
-            new ArrayList<>(placeholder).forEach(HandledPlaceholder::remove);
-            placeholder = null;
+            while (!listeners.isEmpty()) listeners.peek().remove();
+            listeners = null;
+            while (!placeholders.isEmpty()) placeholders.peek().remove();
+            placeholders = null;
             main.unload(this);
             main = null;
             if (unloadHook != null) {
@@ -170,16 +169,16 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     boolean remove(HandledExecutor i) {
-        return executor.remove(i) && main.remove(i);
+        return commands.remove(i) && main.remove(i);
     }
 
     boolean remove(HandledListener i) {
-        return listener.remove(i);
+        return listeners.remove(i);
     }
 
     boolean remove(HandledPlaceholder i) {
-        if (placeholder.remove(i)) {
-            val map = (Map) Reflector.getField(PlaceholderAPI.class, "placeholders");
+        if (placeholders.remove(i)) {
+            val map = Utils.as(Reflector.getField(PlaceholderAPI.class, "placeholders"), Map.class);
             return map.remove(i.getId(), i.getHook());
         }
         return false;
@@ -197,7 +196,7 @@ public final class ScriptPlugin implements Named, Closeable {
     public HandledPlaceholder addPlaceholder(String id, HandledPlaceholder.Func func) {
         val hook = new HandledPlaceholder(this, id, func);
         if (PlaceholderAPI.registerPlaceholderHook(id, hook.getHook())) {
-            placeholder.add(hook);
+            placeholders.add(hook);
             return hook;
         }
         throw new IllegalStateException("id " + id + " conflict");
@@ -207,11 +206,11 @@ public final class ScriptPlugin implements Named, Closeable {
         return addListener(event, i, -1);
     }
 
-    public HandledListener addListener(String event, Consumer<Event> i, int priority) {
+    public HandledListener addListener(String eventName, Consumer<Event> executor, int priority) {
         Preconditions.checkState(isHandled(), "unloaded");
-        EventListener handle = EventMapping.INSTANCE.getListener(event);
-        HandledListener add = handle.add(main, this, new Listener(i, priority));
-        listener.add(add);
+        EventListener handle = EventMapping.INSTANCE.getListener(eventName);
+        HandledListener add = handle.add(this, executor, priority);
+        listeners.add(add);
         return add;
     }
 
@@ -223,7 +222,7 @@ public final class ScriptPlugin implements Named, Closeable {
         Preconditions.checkArgument(!label.equals("script"));
         HandledExecutor handled = new HandledExecutor(this, new Executor(label, permission, i));
         main.addExecutor(handled);
-        executor.add(handled);
+        commands.add(handled);
         return handled;
     }
 
@@ -394,28 +393,4 @@ public final class ScriptPlugin implements Named, Closeable {
         }
 
     }
-
-    public static class Listener {
-
-        private final Consumer<Event> listener;
-        private final int priority;
-
-        private Listener(Consumer<Event> listener, int priority) {
-            this.listener = listener;
-            this.priority = priority;
-        }
-
-        public int getPriority() {
-            return priority;
-        }
-
-        public EventPriority getEventPriority() {
-            return Utils.getEventPriority(priority);
-        }
-
-        public Consumer<Event> getListener() {
-            return listener;
-        }
-    }
-
 }
