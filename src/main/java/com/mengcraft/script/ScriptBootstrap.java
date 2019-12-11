@@ -46,7 +46,7 @@ import static org.bukkit.util.NumberConversions.toInt;
 public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
     private static ScriptBootstrap plugin;
-    private Map<String, Object> scripts;
+    private Map<String, Named> scripts;
     private ScriptEngine jsEngine;
     private final Map<String, HandledExecutor> executor = new HashMap<>();
     private ScriptLoader scriptLoader;
@@ -96,8 +96,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
         EventMapping.INSTANCE.loadClasses();// Register build-in event
         getLogger().info("Initialized " + (EventMapping.INSTANCE.getKnownClasses().size() / 2) + " build-in event(s)");
 
-        Plugin plugin = Bukkit.getPluginManager().getPlugin("PlaceholderAPI");
-        if (!nil(plugin)) {
+        if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             Formatter.setReplacePlaceholder(true);
         }
 
@@ -117,7 +116,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     @Override
     @SneakyThrows
     public void onDisable() {
-        for (Map.Entry<String, Object> i : new HashMap<>(scripts).entrySet()) {
+        for (Map.Entry<String, Named> i : new HashMap<>(scripts).entrySet()) {
             ((Closeable) i.getValue()).close();
         }
         scripts = null;
@@ -168,7 +167,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
     private boolean isLoaded(File file) {
         String id = "file:" + file.getName();
-        return !nil(lookById(id));
+        return lookById(id) != null;
     }
 
     @Override
@@ -177,17 +176,13 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
-            Named i = (Named) scripts.get(name);
-            if (!nil(i)) {
-                ScriptPluginException.thr(loaded, "Name conflict with " + i.getId());
+            Named named = (Named) scripts.get(name);
+            if (named != null) {
+                ScriptPluginException.thr(loaded, "Name conflict with " + named.getId());
             }
             scripts.put(name, binding);
         }
         return binding;
-    }
-
-    public static boolean nil(Object i) {
-        return i == null;
     }
 
     Named lookById(String id) {
@@ -245,12 +240,14 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
         return b;
     }
 
-    boolean unload(ScriptPlugin i) {
-        String id = i.getDescription("name");
-        if (nil(id)) return false;
-        Object obj = scripts.get(id);
+    boolean unload(ScriptPlugin script) {
+        String name = script.getDescription("name");
+        if (name == null) {
+            return false;
+        }
+        Named obj = scripts.get(name);
         ScriptLoader.ScriptBinding binding = obj instanceof ScriptLoader.ScriptBinding ? (ScriptLoader.ScriptBinding) obj : null;
-        return !nil(binding) && binding.getPlugin() == i && scripts.remove(id, binding);
+        return binding != null && binding.getPlugin() == script && scripts.remove(name, binding);
     }
 
     public void unload(ScriptingLoader scripting) {
@@ -266,12 +263,12 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
             return true;
         }
         val binding = getScript(id);
-        return !nil(binding) && binding.getPlugin().unload();
+        return binding != null && binding.getPlugin().unload();
     }
 
     public ScriptLoader.ScriptBinding getScript(String name) {
-        Object binding = scripts.get(name);
-        if (nil(binding) && name.startsWith("file:")) {
+        Named binding = scripts.get(name);
+        if (binding == null && name.startsWith("file:")) {
             binding = lookById(name);
         }
         return binding instanceof ScriptLoader.ScriptBinding ? (ScriptLoader.ScriptBinding) binding : null;
@@ -296,7 +293,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
         public Object getScript(String id) {
             ScriptLoader.ScriptBinding binding = main.getScript(id);
-            return !nil(binding) ? binding.getScriptObj() : null;
+            return binding != null ? binding.getScriptObj() : null;
         }
 
         public BossBarWrapper createBossBar(String text) {

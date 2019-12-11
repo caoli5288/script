@@ -3,7 +3,7 @@ package com.mengcraft.script;
 import com.google.common.base.Preconditions;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
-import com.mengcraft.script.util.$;
+import com.mengcraft.script.util.Utils;
 import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
@@ -16,6 +16,7 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
@@ -29,10 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import static com.mengcraft.script.ScriptBootstrap.nil;
 
 /**
  * Created on 16-10-17.
@@ -45,7 +45,7 @@ public final class ScriptPlugin implements Named, Closeable {
     private List<HandledPlaceholder> placeholder = new LinkedList<>();
     private List<HandledExecutor> executor = new LinkedList<>();
     private List<HandledListener> listener = new LinkedList<>();
-    private List<HandledTask> task = new LinkedList<>();
+    private List<HandledTask> tasks = new LinkedList<>();
     private ScriptBootstrap main;
     private Runnable unloadHook;
 
@@ -66,22 +66,22 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public boolean isIdled() {
         Preconditions.checkState(isHandled(), "unloaded");
-        return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && task.isEmpty();
+        return placeholder.isEmpty() && executor.isEmpty() && listener.isEmpty() && tasks.isEmpty();
     }
 
     public synchronized boolean unload() {
         if (isHandled()) {
             new ArrayList<>(executor).forEach(HandledExecutor::remove);
             executor = null;
-            new ArrayList<>(task).forEach(HandledTask::cancel);
-            task = null;
+            new ArrayList<>(tasks).forEach(HandledTask::cancel);
+            tasks = null;
             new ArrayList<>(listener).forEach(HandledListener::remove);
             listener = null;
             new ArrayList<>(placeholder).forEach(HandledPlaceholder::remove);
             placeholder = null;
             main.unload(this);
             main = null;
-            if (!nil(unloadHook)) {
+            if (unloadHook != null) {
                 try {
                     unloadHook.run();
                 } catch (Exception e) {
@@ -95,7 +95,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     public boolean isHandled() {
-        return !nil(main);
+        return main != null;
     }
 
     public Player getPlayer(String id) {
@@ -146,12 +146,11 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public HandledTask runTask(@NonNull Runnable runnable, int delay, int period, boolean b) {
         Preconditions.checkState(isHandled(), "unloaded");
-        val handled = new HandledTask(this, runnable, period);
-        task.add(handled);
-        val run = Bukkit.getScheduler();
-        handled.setId(b ? run.runTaskTimerAsynchronously(main, handled, delay, period).getTaskId()
-                : run.runTaskTimer(main, handled, delay, period).getTaskId());
-        return handled;
+        HandledTask task = new HandledTask(this, runnable, period);
+        tasks.add(task);
+        task.setId(b ? Bukkit.getScheduler().runTaskTimerAsynchronously(main, task, delay, period).getTaskId()
+                : Bukkit.getScheduler().runTaskTimer(main, task, delay, period).getTaskId());
+        return task;
     }
 
     public HandledTask runTask(Runnable runnable, int delay, int period) {
@@ -187,7 +186,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     boolean cancel(HandledTask i) {
-        val b = task.remove(i);
+        val b = tasks.remove(i);
         if (b) {
             main.getServer().getScheduler().cancelTask(i.getId());
             i.setId(-1);
@@ -204,11 +203,11 @@ public final class ScriptPlugin implements Named, Closeable {
         throw new IllegalStateException("id " + id + " conflict");
     }
 
-    public HandledListener addListener(String event, ScriptListener i) {
+    public HandledListener addListener(String event, Consumer<Event> i) {
         return addListener(event, i, -1);
     }
 
-    public HandledListener addListener(String event, ScriptListener i, int priority) {
+    public HandledListener addListener(String event, Consumer<Event> i, int priority) {
         Preconditions.checkState(isHandled(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(event);
         HandledListener add = handle.add(main, this, new Listener(i, priority));
@@ -246,7 +245,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     public void sendBossBar(Player p, BossBarWrapper bar, int tick) {
-        $.sendBossBar(p, bar, tick);
+        Utils.sendBossBar(p, bar, tick);
     }
 
     public ScriptBootstrap.Unsafe getUnsafe() {
@@ -383,7 +382,7 @@ public final class ScriptPlugin implements Named, Closeable {
             while (it.hasNext()) {
                 val i = it.next();
                 val p = plugin.getUnsafe().getPlugin(i);
-                if (!nil(p) && p.isEnabled()) {
+                if (p != null && p.isEnabled()) {
                     it.remove();
                 }
             }
@@ -398,10 +397,10 @@ public final class ScriptPlugin implements Named, Closeable {
 
     public static class Listener {
 
-        private final ScriptListener listener;
+        private final Consumer<Event> listener;
         private final int priority;
 
-        private Listener(ScriptListener listener, int priority) {
+        private Listener(Consumer<Event> listener, int priority) {
             this.listener = listener;
             this.priority = priority;
         }
@@ -411,25 +410,10 @@ public final class ScriptPlugin implements Named, Closeable {
         }
 
         public EventPriority getEventPriority() {
-            if (priority <= Byte.MIN_VALUE) {
-                return EventPriority.LOWEST;
-            }
-            if (priority <= -64) {
-                return EventPriority.LOW;
-            }
-            if (priority <= -1) {
-                return EventPriority.NORMAL;
-            }
-            if (priority <= 63) {
-                return EventPriority.HIGH;
-            }
-            if (priority <= Byte.MAX_VALUE) {
-                return EventPriority.HIGHEST;
-            }
-            return EventPriority.MONITOR;
+            return Utils.getEventPriority(priority);
         }
 
-        public ScriptListener getListener() {
+        public Consumer<Event> getListener() {
             return listener;
         }
     }

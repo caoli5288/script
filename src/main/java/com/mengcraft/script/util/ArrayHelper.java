@@ -1,11 +1,12 @@
 package com.mengcraft.script.util;
 
 import com.google.common.collect.Lists;
+import com.mengcraft.script.ScriptBootstrap;
 import lombok.SneakyThrows;
-import lombok.val;
+import lombok.experimental.var;
 
 import javax.script.Invocable;
-import javax.script.ScriptEngineManager;
+import javax.script.ScriptContext;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,16 +22,21 @@ public enum ArrayHelper {
         Object toJSArray(Object input);
     }
 
-    final Helper helper;
+    private final Helper helper;
 
     @SneakyThrows
     ArrayHelper() {
-        val engine = new ScriptEngineManager().getEngineByName("js");
-        engine.eval("" +
-                "var toJSArray = function (input) {\n" +
-                "    return Array.prototype.slice.call(input);\n" +
-                "}");
-        helper = Invocable.class.cast(engine).getInterface(Helper.class);
+        var engine = ScriptBootstrap.jsEngine();
+        var oldBindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+        try {
+            engine.eval("" +
+                    "function toJSArray(input) {\n" +
+                    "    return Array.prototype.slice.call(input);\n" +
+                    "}");
+            helper = ((Invocable) engine).getInterface(Helper.class);
+        } finally {
+            engine.setBindings(oldBindings, ScriptContext.ENGINE_SCOPE);
+        }
     }
 
     public static <T> List<T> link(T... in) {

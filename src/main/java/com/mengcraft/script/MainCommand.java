@@ -12,8 +12,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
-
 /**
  * Created on 16-10-25.
  */
@@ -37,7 +35,7 @@ public class MainCommand implements CommandExecutor {
             }
         } else {
             HandledExecutor handled = executor.get(label);
-            if (nil(handled)) {
+            if (handled == null) {
                 throw new IllegalStateException("喵");
             }
             return handled.execute(who, ArrayHelper.toJSArray(j));

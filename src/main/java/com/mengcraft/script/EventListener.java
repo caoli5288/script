@@ -2,6 +2,7 @@ package com.mengcraft.script;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
@@ -23,6 +24,7 @@ public class EventListener implements Listener {
     private final EnumMap<EventPriority, HandledRegisteredListener> handledExecutors = Maps.newEnumMap(EventPriority.class);
     private final Class<?> clz;
     private final String name;
+    @Getter
     private final HandlerList handlerList;
 
     public EventListener(EventMapping.Mapping mapping) {
@@ -41,7 +43,7 @@ public class EventListener implements Listener {
 
     private void handle(HandledListener listener, Event event) {
         try {
-            listener.getListener().handle(event);
+            listener.getListener().accept(event);
         } catch (Exception e) {
             listener.getPlugin().getLogger().log(Level.SEVERE, name(), e);
         }

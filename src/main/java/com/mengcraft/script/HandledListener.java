@@ -1,10 +1,12 @@
 package com.mengcraft.script;
 
 import lombok.EqualsAndHashCode;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 
 import java.util.Comparator;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Created on 16-10-17.
@@ -13,13 +15,13 @@ import java.util.UUID;
 public class HandledListener {
 
     private final UUID id = UUID.randomUUID();// Use random id to func
-    private final ScriptListener listener;
+    private final Consumer<Event> listener;
     private final EventListener managedListener;
     private final int priority;
     private final ScriptPlugin plugin;
     private final EventPriority eventPriority;
 
-    public HandledListener(EventListener managedListener, ScriptPlugin plugin, ScriptListener listener, int priority, EventPriority eventPriority) {
+    public HandledListener(EventListener managedListener, ScriptPlugin plugin, Consumer<Event> listener, int priority, EventPriority eventPriority) {
         this.managedListener = managedListener;
         this.plugin = plugin;
         this.listener = listener;
@@ -33,7 +35,7 @@ public class HandledListener {
         }
     }
 
-    public ScriptListener getListener() {
+    public Consumer<Event> getListener() {
         return listener;
     }
 

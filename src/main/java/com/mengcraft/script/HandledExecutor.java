@@ -3,8 +3,6 @@ package com.mengcraft.script;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
-
 /**
  * Created on 16-10-17.
  */
@@ -23,7 +21,7 @@ public class HandledExecutor {
     }
 
     public boolean execute(CommandSender sender, Object input) {
-        if (nil(permission) || sender.hasPermission(permission)) {
+        if (permission == null || sender.hasPermission(permission)) {
             executor.execute(sender, input);
             return true;
         } else {

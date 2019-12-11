@@ -5,6 +5,7 @@ import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Formatter;
 import com.mengcraft.script.ScriptBootstrap;
 import com.mengcraft.script.util.Named;
+import com.mengcraft.script.util.Utils;
 import lombok.Data;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -18,6 +19,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.server.PluginEnableEvent;
@@ -28,6 +30,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginBase;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginLoader;
+import org.bukkit.plugin.PluginLogger;
 import org.bukkit.plugin.RegisteredListener;
 import org.bukkit.plugin.UnknownDependencyException;
 import org.yaml.snakeyaml.Yaml;
@@ -44,12 +47,13 @@ import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 @Getter
-public class ScriptingLoader extends PluginBase implements PluginLoader, Named, Closeable {
+public class ScriptingLoader extends PluginBase implements PluginLoader, Named, Closeable, Listener {
 
     public ScriptingLoader(File dataFolder) {
         this.dataFolder = dataFolder;
@@ -123,17 +127,17 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return Bukkit.getServer();
     }
 
-    boolean active;
+    private boolean enabled;
 
     @Override
     public boolean isEnabled() {
-        return active;
+        return enabled;
     }
 
-    public void setActive(boolean active) {
-        if (this.active != active) {
-            this.active = active;
-            if (active) {
+    public void setEnabled(boolean setter) {
+        if (enabled != setter) {
+            enabled = setter;
+            if (setter) {
                 onEnable();
             } else {
                 onDisable();
@@ -191,9 +195,11 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return null;
     }
 
+    private final Logger logger = new PluginLogger(this);
+
     @Override
     public Logger getLogger() {
-        return Bukkit.getLogger();
+        return logger;
     }
 
     @Override
@@ -216,12 +222,11 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return null;
     }
 
-    private static Yaml yaml = new Yaml();
-
     @Override
     @SneakyThrows
     public PluginDescriptionFile getPluginDescription(File ymlFile) {
         if (ymlFile.isFile()) {
+            Yaml yaml = Utils.getYaml();
             Map<String, Object> obj = yaml.load(new FileInputStream(ymlFile));
             obj.put("main", "plugin.js");
             return new PluginDescriptionFile(new StringReader(yaml.dump(obj)));
@@ -241,19 +246,17 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return ScriptBootstrap.get().getPluginLoader().createRegisteredListeners(listener, plugin);
     }
 
-    private Server server = Bukkit.getServer();
-
     @Override
     public void enablePlugin(Plugin plugin) {
         Validate.isTrue(plugin instanceof ScriptingLoader, "Plugin is not associated with this PluginLoader");
         if (!plugin.isEnabled()) {
             plugin.getLogger().info("Enabling " + plugin.getDescription().getFullName());
             try {
-                ((ScriptingLoader) plugin).setActive(true);
+                ((ScriptingLoader) plugin).setEnabled(true);
             } catch (Exception e) {
-                server.getLogger().log(Level.SEVERE, "Error occurred while enabling " + plugin.getDescription().getFullName() + " (Is it up to date?)", e);
+                Bukkit.getLogger().log(Level.SEVERE, "Error occurred while enabling " + plugin.getDescription().getFullName() + " (Is it up to date?)", e);
             }
-            server.getPluginManager().callEvent(new PluginEnableEvent(plugin));
+            Bukkit.getPluginManager().callEvent(new PluginEnableEvent(plugin));
         }
     }
 
@@ -263,11 +266,11 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         if (plugin.isEnabled()) {
             String message = String.format("Disabling %s", plugin.getDescription().getFullName());
             plugin.getLogger().info(message);
-            server.getPluginManager().callEvent(new PluginDisableEvent(plugin));
+            Bukkit.getPluginManager().callEvent(new PluginDisableEvent(plugin));
             try {
-                ((ScriptingLoader) plugin).setActive(false);
+                ((ScriptingLoader) plugin).setEnabled(false);
             } catch (Exception e) {
-                server.getLogger().log(Level.SEVERE, "Error occurred while disabling " + plugin.getDescription().getFullName() + " (Is it up to date?)", e);
+                Bukkit.getLogger().log(Level.SEVERE, "Error occurred while disabling " + plugin.getDescription().getFullName() + " (Is it up to date?)", e);
             }
         }
     }
@@ -334,6 +337,10 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         player.setMetadata(key, new FixedMetadataValue(this, value));
     }
 
+    public void removeMetadata(Player player, String metadataKey) {
+        player.removeMetadata(metadataKey, this);
+    }
+
     public Object getMetadata(Player player, String key) {
         for (MetadataValue metadataValue : player.getMetadata(key)) {
             if (metadataValue.getOwningPlugin() == this) {
@@ -341,6 +348,17 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
             }
         }
         return null;
+    }
+
+    public void addListener(String eventName, Consumer<Event> executor, int priority) {
+        HandlerList handlerList = EventMapping.get().getListener(eventName).getHandlerList();
+        RegisteredListener registered = new RegisteredListener(this, (_i, event) -> executor.accept(event), Utils.getEventPriority(priority), this, false);
+        handlerList.register(registered);
+
+    }
+
+    public void addListener(String eventName, Consumer<Event> executor) {
+        addListener(eventName, executor, -1);
     }
 
 }

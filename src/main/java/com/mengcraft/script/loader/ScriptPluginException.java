@@ -4,8 +4,6 @@ import com.mengcraft.script.ScriptPlugin;
 
 import javax.script.ScriptException;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
-
 /**
  * Created on 16-10-17.
  */
@@ -22,11 +20,11 @@ public class ScriptPluginException extends ScriptException {
         return plugin;
     }
 
-    public static void thr(ScriptPlugin i, String str) throws ScriptPluginException {
-        if (!nil(i)) {
-            i.unload();
+    public static void thr(ScriptPlugin script, String str) throws ScriptPluginException {
+        if (script != null) {
+            script.unload();
         }
-        throw new ScriptPluginException(i, str);
+        throw new ScriptPluginException(script, str);
     }
 
 }

@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.UUID;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
-
 /**
  * Created on 16-10-17.
  */
@@ -42,7 +40,7 @@ public class HandledTask implements Runnable {
     }
 
     public void complete() {
-        if (cancel() && !nil(complete)) {
+        if (cancel() && complete != null) {
             complete.run();
         }
     }

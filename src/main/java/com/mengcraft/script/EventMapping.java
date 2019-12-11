@@ -30,8 +30,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
-
 /**
  * Created on 16-10-17.
  */
@@ -192,7 +190,7 @@ public final class EventMapping {
         }
 
         private EventListener getListener() {
-            if (nil(listener)) {
+            if (listener == null) {
                 listener = new EventListener(this);
             }
             return listener;

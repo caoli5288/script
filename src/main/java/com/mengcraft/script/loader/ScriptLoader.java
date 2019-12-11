@@ -2,13 +2,14 @@ package com.mengcraft.script.loader;
 
 import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.ScriptBootstrap;
-import com.mengcraft.script.ScriptListener;
 import com.mengcraft.script.ScriptPlugin;
 import com.mengcraft.script.util.Named;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import lombok.Builder;
 import lombok.experimental.Delegate;
+import lombok.experimental.var;
 import org.bukkit.command.CommandSender;
+import org.bukkit.event.Event;
 
 import javax.script.Bindings;
 import javax.script.Invocable;
@@ -16,10 +17,10 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.io.Closeable;
-import java.io.Reader;
 import java.util.Map;
+import java.util.function.Consumer;
 
-import static com.mengcraft.script.ScriptBootstrap.nil;
+import static com.mengcraft.script.util.Utils.as;
 
 /**
  * Created on 16-10-17.
@@ -48,7 +49,7 @@ public class ScriptLoader {
         Object description = ctx.get("description");
         if (description instanceof Map) {
             plugin.setDescription((Map) description);
-            if (nil(plugin.getDescription("name"))) {
+            if (plugin.getDescription("name") == null) {
                 plugin.setDescription("name", info.id);
             }
             loadListener(plugin, ctx);
@@ -64,13 +65,13 @@ public class ScriptLoader {
     private static String load(ScriptPlugin plugin) {
         StringBuilder b = new StringBuilder("Loaded script ");
         b.append(plugin.getDescription("name"));
-        Object version = plugin.getDescription("version");
-        if (!nil(version)) {
+        var version = plugin.getDescription("version");
+        if (version != null) {
             b.append(" v");
             b.append(version);
         }
-        Object author = plugin.getDescription("author");
-        if (!nil(author)) {
+        var author = plugin.getDescription("author");
+        if (author != null) {
             b.append(" authored by ");
             b.append(author);
         }
@@ -79,10 +80,10 @@ public class ScriptLoader {
 
     private static void loadListener(ScriptPlugin plugin, ScriptEngine ctx) {
         String handle = plugin.getDescription("handle");
-        if (!nil(handle) && EventMapping.INSTANCE.initialized(handle)) {
-            ScriptListener listener = ((Invocable) ctx).getInterface(ScriptListener.class);
-            if (!nil(listener)) {
-                plugin.addListener(handle, listener);
+        if (handle != null && EventMapping.INSTANCE.initialized(handle)) {
+            var obj = as(ctx.get("handle"), ScriptObjectMirror.class);
+            if (obj != null) {
+                plugin.addListener(handle, event -> obj.call(null, event));
             }
         }
     }
