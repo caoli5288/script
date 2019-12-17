@@ -1,7 +1,11 @@
 package com.mengcraft.script;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.mengcraft.script.loader.ScriptPluginException;
-import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.Utils;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,30 +19,41 @@ import java.util.Map;
 /**
  * Created on 16-10-25.
  */
-public class MainCommand implements CommandExecutor {
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
+public class ScriptCommand implements CommandExecutor {
 
-    private final Map<String, HandledExecutor> executor;
-    private final ScriptBootstrap main;
+    private final Map<String, HandledCommand> commands = Maps.newHashMap();
 
-    MainCommand(ScriptBootstrap main, Map<String, HandledExecutor> executor) {
-        this.main = main;
-        this.executor = executor;
+    public boolean containsKey(Object key) {
+        return commands.containsKey(key);
+    }
+
+    public HandledCommand get(Object key) {
+        return commands.get(key);
+    }
+
+    public HandledCommand put(String key, HandledCommand value) {
+        return commands.put(key, value);
+    }
+
+    public HandledCommand remove(Object key) {
+        return commands.remove(key);
     }
 
     @Override
-    public boolean onCommand(CommandSender who, Command i, String label, String[] j) {
+    public boolean onCommand(CommandSender who, Command _command, String label, String[] params) {
         if (label.equals("script") || label.equals("script:script")) {
             if (who.hasPermission("script.admin")) {
-                return admin(who, Arrays.asList(j).iterator());
+                return admin(who, Arrays.asList(params).iterator());
             } else {
                 who.sendMessage(ChatColor.RED + "你没有执行权限");
             }
         } else {
-            HandledExecutor handled = executor.get(label);
-            if (handled == null) {
+            HandledCommand executor = commands.get(label);
+            if (executor == null) {
                 throw new IllegalStateException("喵");
             }
-            return handled.execute(who, ArrayHelper.toJSArray(j));
+            return executor.onCommand(who, _command, label, params);
         }
         return false;
     }
@@ -50,7 +65,7 @@ public class MainCommand implements CommandExecutor {
                 return list(who);
             }
             if (label.equals("load")) {
-                return i.hasNext() && load(who, i.next(), i.hasNext() ? ArrayHelper.toJSArray(i) : null);
+                return i.hasNext() && load(who, i.next(), i.hasNext() ? Utils.fromJava(Lists.newArrayList(i)) : null);
             }
             if (label.equals("unload")) {
                 return i.hasNext() && unload(who, i.next());
@@ -68,13 +83,13 @@ public class MainCommand implements CommandExecutor {
     }
 
     private boolean reload(CommandSender who) {
-        main.reload();
+        ScriptBootstrap.get().reload();
         who.sendMessage(ChatColor.GREEN + "O-kay!");
         return true;
     }
 
     private boolean unload(CommandSender who, String i) {
-        if (main.unload(i)) {
+        if (ScriptBootstrap.get().unload(i)) {
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         }
@@ -83,7 +98,7 @@ public class MainCommand implements CommandExecutor {
 
     private boolean list(CommandSender who) {
         who.sendMessage(ChatColor.GREEN + "> Loaded script(s)");
-        for (String l : main.list()) {
+        for (String l : ScriptBootstrap.get().list()) {
             who.sendMessage(ChatColor.GREEN + "- " + l);
         }
         return true;
@@ -91,7 +106,7 @@ public class MainCommand implements CommandExecutor {
 
     private boolean load(CommandSender who, String load, Object arg) {
         try {
-            main.load(who, new File(main.getDataFolder(), load), arg);
+            ScriptBootstrap.get().load(who, new File(ScriptBootstrap.get().getDataFolder(), load), arg);
             who.sendMessage(ChatColor.GREEN + "O-kay!");
             return true;
         } catch (IllegalArgumentException | ScriptPluginException e) {

@@ -6,11 +6,11 @@ import com.google.common.io.Files;
 import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.plugin.ScriptingLoader;
-import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.experimental.var;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import static com.mengcraft.script.util.Utils.as;
 import static org.bukkit.util.NumberConversions.toInt;
 
 /**
@@ -46,9 +47,9 @@ import static org.bukkit.util.NumberConversions.toInt;
 public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
     private static ScriptBootstrap plugin;
+    private final ScriptCommand scriptCommand = new ScriptCommand();
     private Map<String, Named> scripts;
     private ScriptEngine jsEngine;
-    private final Map<String, HandledExecutor> executor = new HashMap<>();
     private ScriptLoader scriptLoader;
     private Unsafe unsafe;
 
@@ -89,9 +90,8 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     @Override
     public void onEnable() {
         scriptLoader = new ScriptLoader();
-        getServer().getConsoleSender().sendMessage(ArrayHelper.toArray(
-                ChatColor.GREEN + "梦梦家高性能服务器出租店",
-                ChatColor.GREEN + "shop105595113.taobao.com"));
+        getServer().getConsoleSender().sendMessage(ChatColor.GREEN + "梦梦家高性能服务器出租店");
+        getServer().getConsoleSender().sendMessage(ChatColor.GREEN + "shop105595113.taobao.com");
 
         EventMapping.INSTANCE.loadClasses();// Register build-in event
         getLogger().info("Initialized " + (EventMapping.INSTANCE.getKnownClasses().size() / 2) + " build-in event(s)");
@@ -100,7 +100,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
             Formatter.setReplacePlaceholder(true);
         }
 
-        getCommand("script").setExecutor(new MainCommand(this, executor));
+        getCommand("script").setExecutor(scriptCommand);
 
         saveDefaultConfig();
         unsafe = new Unsafe(this);
@@ -176,7 +176,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
         ScriptPlugin loaded = binding.getPlugin();
         if (loaded.isHandled() && !loaded.isIdled()) {
             String name = loaded.getDescription("name");
-            Named named = (Named) scripts.get(name);
+            Named named = scripts.get(name);
             if (named != null) {
                 ScriptPluginException.thr(loaded, "Name conflict with " + named.getId());
             }
@@ -185,7 +185,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
         return binding;
     }
 
-    Named lookById(String id) {
+    private Named lookById(String id) {
         for (Object obj : scripts.values()) {
             Named named = (Named) obj;
             if (named.getId().equals(id)) {
@@ -200,30 +200,26 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     }
 
     @SuppressWarnings("unchecked")
-    protected void addExecutor(HandledExecutor handled) {
-        String label = handled.getLabel();
-        Preconditions.checkState(!executor.containsKey(label));
-        try {
-            Field field = SimplePluginManager.class.getDeclaredField("commandMap");
-            field.setAccessible(true);
-            SimpleCommandMap i = SimpleCommandMap.class.cast(field.get(getServer().getPluginManager()));
-            Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
-            f.setAccessible(true);
-            Map handler = Map.class.cast(f.get(i));
-            PluginCommand command = getCommand("script");
-            handler.putIfAbsent(label, command);
-            handler.putIfAbsent("script:" + label, command);
-            executor.put(label, handled);
-            executor.put("script:" + label, handled);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e.getMessage());
-        }
+    @SneakyThrows
+    protected void addExecutor(HandledCommand executor) {
+        Preconditions.checkState(!scriptCommand.containsKey(executor.getLabel()));
+        String label = executor.getLabel();
+        Field field = SimplePluginManager.class.getDeclaredField("commandMap");
+        field.setAccessible(true);
+        var commandMap = as(field.get(getServer().getPluginManager()), SimpleCommandMap.class);
+        Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
+        f.setAccessible(true);
+        var knownCommands = as(f.get(commandMap), Map.class);
+        PluginCommand command = getCommand("script");
+        knownCommands.putIfAbsent(label, command);
+        knownCommands.putIfAbsent("script:" + label, command);
+        scriptCommand.put(label, executor);
+        scriptCommand.put("script:" + label, executor);
     }
 
     @SneakyThrows
-    protected boolean remove(HandledExecutor handled) {
-        boolean b = executor.containsKey(handled.getLabel());
-        if (b) {
+    protected boolean remove(HandledCommand handled) {
+        if (scriptCommand.containsKey(handled.getLabel())) {
             String label = handled.getLabel();
             Field field = SimplePluginManager.class.getDeclaredField("commandMap");
             field.setAccessible(true);
@@ -234,10 +230,11 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
             PluginCommand command = getCommand("script");
             handler.remove(label, command);
             handler.remove("script:" + label, command);
-            executor.remove(label);
-            executor.remove("script:" + label);
+            scriptCommand.remove(label);
+            scriptCommand.remove("script:" + label);
+            return true;
         }
-        return b;
+        return false;
     }
 
     boolean unload(ScriptPlugin script) {

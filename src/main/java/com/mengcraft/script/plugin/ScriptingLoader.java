@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Formatter;
 import com.mengcraft.script.ScriptBootstrap;
+import com.mengcraft.script.util.LazyValue;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Utils;
 import lombok.Data;
@@ -195,11 +196,11 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return null;
     }
 
-    private final Logger logger = new PluginLogger(this);
+    private final LazyValue<Logger> logger = new LazyValue<>(() -> new PluginLogger(this));
 
     @Override
     public Logger getLogger() {
-        return logger;
+        return logger.get();
     }
 
     @Override

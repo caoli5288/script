@@ -4,12 +4,10 @@ import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.ScriptBootstrap;
 import com.mengcraft.script.ScriptPlugin;
 import com.mengcraft.script.util.Named;
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import lombok.Builder;
 import lombok.experimental.Delegate;
 import lombok.experimental.var;
 import org.bukkit.command.CommandSender;
-import org.bukkit.event.Event;
 
 import javax.script.Bindings;
 import javax.script.Invocable;
@@ -19,8 +17,6 @@ import javax.script.ScriptException;
 import java.io.Closeable;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import static com.mengcraft.script.util.Utils.as;
 
 /**
  * Created on 16-10-17.
@@ -81,9 +77,9 @@ public class ScriptLoader {
     private static void loadListener(ScriptPlugin plugin, ScriptEngine ctx) {
         String handle = plugin.getDescription("handle");
         if (handle != null && EventMapping.INSTANCE.initialized(handle)) {
-            var obj = as(ctx.get("handle"), ScriptObjectMirror.class);
+            var obj = ctx.get("handle");
             if (obj != null) {
-                plugin.addListener(handle, event -> obj.call(null, event));
+                plugin.addListener(handle, ((Invocable) ctx).getInterface(obj, Consumer.class));
             }
         }
     }
@@ -112,8 +108,8 @@ public class ScriptLoader {
             return plugin;
         }
 
-        public ScriptObjectMirror getScriptObj() {
-            return (ScriptObjectMirror) scriptObj;
+        public Bindings getScriptObj() {
+            return (Bindings) scriptObj;
         }
 
         @Override

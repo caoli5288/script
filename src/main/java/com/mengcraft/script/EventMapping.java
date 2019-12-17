@@ -6,7 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.mengcraft.script.util.ArrayHelper;
+import com.mengcraft.script.util.Utils;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -126,7 +126,7 @@ public final class EventMapping {
                 list.add(key);
             }
         });
-        return ArrayHelper.toJSArray(list.toArray());
+        return Utils.fromJava(list);
     }
 
     protected static HandlerList getHandler(Mapping mapping) {

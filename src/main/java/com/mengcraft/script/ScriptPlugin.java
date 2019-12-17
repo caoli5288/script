@@ -1,10 +1,10 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.Utils;
-import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Reflector;
@@ -15,20 +15,22 @@ import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.PermissionAttachment;
 
+import javax.script.Bindings;
 import java.io.Closeable;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,7 +44,7 @@ public final class ScriptPlugin implements Named, Closeable {
     private final ScriptDescription description;
     private final Logger logger;
     private LinkedList<HandledPlaceholder> placeholders = new LinkedList<>();
-    private LinkedList<HandledExecutor> commands = new LinkedList<>();
+    private LinkedList<HandledCommand> commands = new LinkedList<>();
     private LinkedList<HandledListener> listeners = new LinkedList<>();
     private LinkedList<HandledTask> tasks = new LinkedList<>();
     private ScriptBootstrap main;
@@ -131,7 +133,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     public boolean depend(String depend, Runnable runnable) {
-        return depend(ArrayHelper.link(depend), runnable);
+        return depend(Lists.newArrayList(depend), runnable);
     }
 
     public boolean depend(List<String> depend, Runnable runnable) {
@@ -168,7 +170,7 @@ public final class ScriptPlugin implements Named, Closeable {
         return runTask(runnable, 0, -1, b);
     }
 
-    boolean remove(HandledExecutor i) {
+    boolean remove(HandledCommand i) {
         return commands.remove(i) && main.remove(i);
     }
 
@@ -214,13 +216,13 @@ public final class ScriptPlugin implements Named, Closeable {
         return add;
     }
 
-    public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
+    public HandledCommand addExecutor(String label, BiConsumer<CommandSender, Bindings> executor) {
         return addExecutor(label, null, executor);
     }
 
-    public HandledExecutor addExecutor(String label, String permission, ScriptExecutor i) {
+    public HandledCommand addExecutor(String label, String permission, BiConsumer<CommandSender, Bindings> executor) {
         Preconditions.checkArgument(!label.equals("script"));
-        HandledExecutor handled = new HandledExecutor(this, new Executor(label, permission, i));
+        HandledCommand handled = new HandledCommand(this, label, executor, permission);
         main.addExecutor(handled);
         commands.add(handled);
         return handled;
@@ -335,31 +337,6 @@ public final class ScriptPlugin implements Named, Closeable {
     @Override
     public String getName() {
         return getDescription("name");
-    }
-
-    public static class Executor {
-
-        private final String permission;
-        private final String label;
-        private final ScriptExecutor executor;
-
-        public Executor(String label, String permission, ScriptExecutor executor) {
-            this.label = label;
-            this.permission = permission;
-            this.executor = executor;
-        }
-
-        public String getPermission() {
-            return permission;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public ScriptExecutor getExecutor() {
-            return executor;
-        }
     }
 
     @RequiredArgsConstructor
