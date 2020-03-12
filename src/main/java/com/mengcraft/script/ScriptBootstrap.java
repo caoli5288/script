@@ -67,7 +67,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
             case "js":
                 ScriptEngine ctx = jsEngine();
                 Bindings bindings = ctx.createBindings();
-                ctx.eval("exports = {}", bindings);
+                ctx.eval("exports = {}; load(\"nashorn:mozilla_compat.js\"); importPackage(java.lang, java.util, org.bukkit);", bindings);
                 ctx.eval(Files.newReader(required, StandardCharsets.UTF_8), bindings);
                 return ctx.eval("exports", bindings);
             case "json":
@@ -84,7 +84,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     @Override
     public void onLoad() {
         plugin = this;
-        jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByExtension("js");
+        jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByName("nashorn");
     }
 
     @Override

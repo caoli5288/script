@@ -36,6 +36,7 @@ public class ScriptLoader {
         ctx.put("loader", info.loader);
         Object scriptObj = null;
         try {
+            ctx.eval("load(\"nashorn:mozilla_compat.js\"); importPackage(java.lang, java.util, org.bukkit);");
             ctx.eval(info.contend);
             scriptObj = ctx.eval("this");
         } catch (ScriptException e) {

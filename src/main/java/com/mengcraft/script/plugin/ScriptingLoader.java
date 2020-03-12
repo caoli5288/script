@@ -176,6 +176,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         Object global = ctx.eval("this", bindings);
         Object jsObject = ctx.eval("Object", bindings);
         ((Invocable) ctx).invokeMethod(jsObject, "bindProperties", global, this);
+        ctx.eval("load(\"nashorn:mozilla_compat.js\"); importPackage(java.lang, java.util, org.bukkit);", bindings);
         ctx.eval(new FileReader(jsFile), bindings);
     }
 
