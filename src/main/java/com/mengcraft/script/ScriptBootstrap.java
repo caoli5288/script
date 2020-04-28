@@ -8,6 +8,7 @@ import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.plugin.ScriptingLoader;
 import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
+import com.mengcraft.script.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.var;
@@ -85,6 +86,7 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     public void onLoad() {
         plugin = this;
         jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByName("nashorn");
+        Utils.setup(jsEngine);
     }
 
     @Override

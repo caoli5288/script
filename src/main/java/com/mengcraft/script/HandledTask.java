@@ -1,9 +1,11 @@
 package com.mengcraft.script;
 
+import com.mengcraft.script.util.Utils;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
+import javax.script.Bindings;
 import java.util.UUID;
 
 /**
@@ -16,7 +18,7 @@ public class HandledTask implements Runnable {
     private final UUID uniqueId = UUID.randomUUID();
 
     private final ScriptPlugin plugin;
-    private final Runnable run;
+    private final Bindings invokableObj;
     private final int period;
 
     private Runnable complete;
@@ -32,9 +34,14 @@ public class HandledTask implements Runnable {
 
     @Override
     public void run() {
+        long clock = System.currentTimeMillis();
         try {
-            run.run();
+            Utils.invoke(invokableObj);
         } finally {
+            clock = System.currentTimeMillis() - clock;
+            if (clock >= 5) {
+                plugin.getLogger().warning(String.format("Tasks consume too much time. (%s millis)\n%s", clock, invokableObj.toString()));
+            }
             if (period < 1) complete();
         }
     }

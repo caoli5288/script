@@ -2,21 +2,23 @@ package com.mengcraft.script.util;
 
 import com.mengcraft.script.ScriptBootstrap;
 import lombok.SneakyThrows;
-import lombok.experimental.var;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.script.Bindings;
 import javax.script.Invocable;
+import javax.script.ScriptEngine;
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Utils {
 
     private static final Yaml YAML = new Yaml();
     private static Function<Object, Bindings> java_from_invoker;
+    private static Consumer<Bindings> function_invoker;
 
     public static Yaml getYaml() {
         return YAML;
@@ -41,12 +43,21 @@ public class Utils {
     }
 
     @SneakyThrows
+    public static void setup(ScriptEngine js) {
+        Bindings bindings = js.createBindings();
+        js.eval("function apply(a){return Java.from(a);}", bindings);
+        java_from_invoker = ((Invocable) js).getInterface(bindings, Function.class);
+        bindings = js.createBindings();
+        js.eval("function accept(a){a();}", bindings);
+        function_invoker = ((Invocable) js).getInterface(bindings, Consumer.class);
+    }
+
+    public static void invoke(Bindings bindings) {
+        function_invoker.accept(bindings);
+    }
+
+    @SneakyThrows
     public static <T> Bindings fromJava(T obj) {
-        if (java_from_invoker == null) {
-            var js = ScriptBootstrap.jsEngine();
-            var function = js.eval("(function a(a){return Java.from(a);})");
-            java_from_invoker = ((Invocable) js).getInterface(function, Function.class);
-        }
         return java_from_invoker.apply(obj);
     }
 

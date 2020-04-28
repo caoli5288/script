@@ -141,33 +141,33 @@ public final class ScriptPlugin implements Named, Closeable {
         return call.call();
     }
 
-    public HandledTask runTask(Runnable runnable) {
-        return runTask(runnable, 0, -1, false);
+    public HandledTask runTask(Bindings invokable) {
+        return runTask(invokable, 0, -1, false);
     }
 
-    public HandledTask runTask(@NonNull Runnable runnable, int delay, int period, boolean b) {
+    public HandledTask runTask(@NonNull Bindings invokable, int delay, int period, boolean b) {
         Preconditions.checkState(isHandled(), "unloaded");
-        HandledTask task = new HandledTask(this, runnable, period);
+        HandledTask task = new HandledTask(this, invokable, period);
         tasks.add(task);
         task.setId(b ? Bukkit.getScheduler().runTaskTimerAsynchronously(main, task, delay, period).getTaskId()
                 : Bukkit.getScheduler().runTaskTimer(main, task, delay, period).getTaskId());
         return task;
     }
 
-    public HandledTask runTask(Runnable runnable, int delay, int period) {
-        return runTask(runnable, delay, period, false);
+    public HandledTask runTask(Bindings invokable, int delay, int period) {
+        return runTask(invokable, delay, period, false);
     }
 
-    public HandledTask runTask(Runnable runnable, int delay, boolean b) {
-        return runTask(runnable, delay, -1, b);
+    public HandledTask runTask(Bindings invokable, int delay, boolean b) {
+        return runTask(invokable, delay, -1, b);
     }
 
-    public HandledTask runTask(Runnable runnable, int delay) {
-        return runTask(runnable, delay, -1, false);
+    public HandledTask runTask(Bindings invokable, int delay) {
+        return runTask(invokable, delay, -1, false);
     }
 
-    public HandledTask runTask(Runnable runnable, boolean b) {
-        return runTask(runnable, 0, -1, b);
+    public HandledTask runTask(Bindings invokable, boolean b) {
+        return runTask(invokable, 0, -1, b);
     }
 
     boolean remove(HandledCommand i) {
