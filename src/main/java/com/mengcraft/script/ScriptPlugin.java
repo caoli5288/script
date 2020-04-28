@@ -204,11 +204,11 @@ public final class ScriptPlugin implements Named, Closeable {
         throw new IllegalStateException("id " + id + " conflict");
     }
 
-    public HandledListener addListener(String event, Consumer<Event> i) {
-        return addListener(event, i, -1);
+    public HandledListener addListener(String event, Bindings executor) {
+        return addListener(event, executor, -1);
     }
 
-    public HandledListener addListener(String eventName, Consumer<Event> executor, int priority) {
+    public HandledListener addListener(String eventName, Bindings executor, int priority) {
         Preconditions.checkState(isHandled(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(eventName);
         HandledListener add = handle.add(this, executor, priority);

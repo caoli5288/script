@@ -11,6 +11,7 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -19,6 +20,7 @@ public class Utils {
     private static final Yaml YAML = new Yaml();
     private static Function<Object, Bindings> java_from_invoker;
     private static Consumer<Bindings> function_invoker;
+    private static BiConsumer<Bindings, Object> function_alt_invoker;
 
     public static Yaml getYaml() {
         return YAML;
@@ -50,10 +52,17 @@ public class Utils {
         bindings = js.createBindings();
         js.eval("function accept(a){a();}", bindings);
         function_invoker = ((Invocable) js).getInterface(bindings, Consumer.class);
+        bindings = js.createBindings();
+        js.eval("function accept(a, b){a(b);}", bindings);
+        function_alt_invoker = ((Invocable) js).getInterface(bindings, BiConsumer.class);
     }
 
     public static void invoke(Bindings bindings) {
         function_invoker.accept(bindings);
+    }
+
+    public static <T> void invoke(Bindings invokable, T obj) {
+        function_alt_invoker.accept(invokable, obj);
     }
 
     @SneakyThrows

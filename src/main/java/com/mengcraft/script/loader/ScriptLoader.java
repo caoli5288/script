@@ -80,7 +80,7 @@ public class ScriptLoader {
         if (handle != null && EventMapping.INSTANCE.initialized(handle)) {
             var obj = ctx.get("handle");
             if (obj != null) {
-                plugin.addListener(handle, ((Invocable) ctx).getInterface(obj, Consumer.class));
+                plugin.addListener(handle, (Bindings) obj);
             }
         }
     }
