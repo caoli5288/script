@@ -50,6 +50,9 @@ public final class EventMapping {
 
     @SneakyThrows
     public EventListener getListener(String name) {
+        if (GroovyIntegration.isIntegrated()) {
+            return GroovyIntegration.getListener(name);
+        }
         name = name.toLowerCase();
         if (mapping.containsKey(name)) {
             return mapping.get(name).getListener();
@@ -67,8 +70,10 @@ public final class EventMapping {
     }
 
     protected void loadClasses() {
-        URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
-        loadClasses(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
+        if (!GroovyIntegration.isIntegrated()) {
+            URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
+            loadClasses(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
+        }
     }
 
     protected void loadClasses(Plugin plugin, ClassLoader loader, URL path, String regex) {
@@ -92,7 +97,7 @@ public final class EventMapping {
         Binding binding = Binding.create(plugin, loader, element.getName());
         String name = Files.getNameWithoutExtension(element.getName()).toLowerCase();
         knownClasses.put(name, binding);
-        knownClasses.put(String.format("%s:%s", plugin == null ? "bukkit" : plugin.getName().toLowerCase(), name), binding);
+        knownClasses.put(String.format("%s:%s", plugin == null ? "bukkit" : plugin.getName(), name), binding);
     }
 
     protected void loadEventClass(Plugin plugin, Class<?> clz) {
@@ -105,12 +110,17 @@ public final class EventMapping {
         mapping.put((plugin == null ? "bukkit" : plugin.getName().toLowerCase()) + ':' + label, value);
     }
 
-    public void init(String plugin) {
-        init(Bukkit.getPluginManager().getPlugin(plugin));
+    public void init(String name) {
+        Plugin plugin = Bukkit.getPluginManager().getPlugin(name);
+        Objects.requireNonNull(plugin, "Cannot found plugin " + name);
+        init(plugin);
     }
 
     @SneakyThrows
     public void init(Plugin plugin) {
+        if (GroovyIntegration.isIntegrated()) {
+            GroovyIntegration.loadClasses(plugin);
+        }
         if (plugins.add(plugin.getName().toLowerCase())) {
             Class<?> pluginClass = plugin.getClass();
             URL path = pluginClass.getProtectionDomain().getCodeSource().getLocation();

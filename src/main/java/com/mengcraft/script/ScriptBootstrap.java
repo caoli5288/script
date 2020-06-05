@@ -88,6 +88,9 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
 
     @Override
     public void onEnable() {
+        if (getServer().getPluginManager().isPluginEnabled("BukkitGroovy")) {
+            GroovyIntegration.integrate();
+        }
         scriptLoader = new ScriptLoader();
         getServer().getConsoleSender().sendMessage(ArrayHelper.toArray(
                 ChatColor.GREEN + "梦梦家高性能服务器出租店",

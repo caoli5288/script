@@ -1,4 +1,5 @@
-# Script
+# Script[![](https://jitpack.io/v/caoli5288/script.svg)](https://jitpack.io/#caoli5288/script)
+
 Load JavaScript plugin in bukkit server. Release under GPLv2.
 
 ## 示例
@@ -261,3 +262,7 @@ plugin.sendBossBar(norch, "hello, %player_name%", {color: "red", style: 0, flag:
 
 ### 注意
 初次接触js脚本的童鞋注意，脚本可以正确调用`Java`中的重载方法，但是脚本无法声明重载函数，请务必注意。
+
+## Snapshots
+
+[![](https://jitpack.io/v/caoli5288/script.svg)](https://jitpack.io/com/github/caoli5288/script/master-SNAPSHOT/script-master-SNAPSHOT.jar)

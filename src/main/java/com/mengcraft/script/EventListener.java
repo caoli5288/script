@@ -33,6 +33,12 @@ public class EventListener implements Listener {
         handlerList = EventMapping.getHandler(mapping);
     }
 
+    EventListener(Class<?> clz, String name, HandlerList handlerList) {
+        this.clz = clz;
+        this.name = name;
+        this.handlerList = handlerList;
+    }
+
     protected void remove(HandledListener listener) {
         EventPriority priority = listener.getEventPriority();
         CustomRegisteredListener custom = handledExecutors.get(priority);
