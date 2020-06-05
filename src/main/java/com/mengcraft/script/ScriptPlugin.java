@@ -1,10 +1,10 @@
 package com.mengcraft.script;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.mengcraft.script.loader.ScriptDescription;
 import com.mengcraft.script.loader.ScriptLogger;
 import com.mengcraft.script.util.Utils;
-import com.mengcraft.script.util.ArrayHelper;
 import com.mengcraft.script.util.BossBarWrapper;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Reflector;
@@ -15,20 +15,22 @@ import lombok.val;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.permissions.PermissionAttachment;
 
+import javax.script.Bindings;
 import java.io.Closeable;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,7 +44,7 @@ public final class ScriptPlugin implements Named, Closeable {
     private final ScriptDescription description;
     private final Logger logger;
     private LinkedList<HandledPlaceholder> placeholders = new LinkedList<>();
-    private LinkedList<HandledExecutor> commands = new LinkedList<>();
+    private LinkedList<HandledCommand> commands = new LinkedList<>();
     private LinkedList<HandledListener> listeners = new LinkedList<>();
     private LinkedList<HandledTask> tasks = new LinkedList<>();
     private ScriptBootstrap main;
@@ -131,7 +133,7 @@ public final class ScriptPlugin implements Named, Closeable {
     }
 
     public boolean depend(String depend, Runnable runnable) {
-        return depend(ArrayHelper.link(depend), runnable);
+        return depend(Lists.newArrayList(depend), runnable);
     }
 
     public boolean depend(List<String> depend, Runnable runnable) {
@@ -139,36 +141,36 @@ public final class ScriptPlugin implements Named, Closeable {
         return call.call();
     }
 
-    public HandledTask runTask(Runnable runnable) {
-        return runTask(runnable, 0, -1, false);
+    public HandledTask runTask(Bindings invokable) {
+        return runTask(invokable, 0, -1, false);
     }
 
-    public HandledTask runTask(@NonNull Runnable runnable, int delay, int period, boolean b) {
+    public HandledTask runTask(@NonNull Bindings invokable, int delay, int period, boolean b) {
         Preconditions.checkState(isHandled(), "unloaded");
-        HandledTask task = new HandledTask(this, runnable, period);
+        HandledTask task = new HandledTask(this, invokable, period);
         tasks.add(task);
         task.setId(b ? Bukkit.getScheduler().runTaskTimerAsynchronously(main, task, delay, period).getTaskId()
                 : Bukkit.getScheduler().runTaskTimer(main, task, delay, period).getTaskId());
         return task;
     }
 
-    public HandledTask runTask(Runnable runnable, int delay, int period) {
-        return runTask(runnable, delay, period, false);
+    public HandledTask runTask(Bindings invokable, int delay, int period) {
+        return runTask(invokable, delay, period, false);
     }
 
-    public HandledTask runTask(Runnable runnable, int delay, boolean b) {
-        return runTask(runnable, delay, -1, b);
+    public HandledTask runTask(Bindings invokable, int delay, boolean b) {
+        return runTask(invokable, delay, -1, b);
     }
 
-    public HandledTask runTask(Runnable runnable, int delay) {
-        return runTask(runnable, delay, -1, false);
+    public HandledTask runTask(Bindings invokable, int delay) {
+        return runTask(invokable, delay, -1, false);
     }
 
-    public HandledTask runTask(Runnable runnable, boolean b) {
-        return runTask(runnable, 0, -1, b);
+    public HandledTask runTask(Bindings invokable, boolean b) {
+        return runTask(invokable, 0, -1, b);
     }
 
-    boolean remove(HandledExecutor i) {
+    boolean remove(HandledCommand i) {
         return commands.remove(i) && main.remove(i);
     }
 
@@ -202,11 +204,11 @@ public final class ScriptPlugin implements Named, Closeable {
         throw new IllegalStateException("id " + id + " conflict");
     }
 
-    public HandledListener addListener(String event, Consumer<Event> i) {
-        return addListener(event, i, -1);
+    public HandledListener addListener(String event, Bindings executor) {
+        return addListener(event, executor, -1);
     }
 
-    public HandledListener addListener(String eventName, Consumer<Event> executor, int priority) {
+    public HandledListener addListener(String eventName, Bindings executor, int priority) {
         Preconditions.checkState(isHandled(), "unloaded");
         EventListener handle = EventMapping.INSTANCE.getListener(eventName);
         HandledListener add = handle.add(this, executor, priority);
@@ -214,13 +216,13 @@ public final class ScriptPlugin implements Named, Closeable {
         return add;
     }
 
-    public HandledExecutor addExecutor(String label, ScriptExecutor executor) {
+    public HandledCommand addExecutor(String label, BiConsumer<CommandSender, Bindings> executor) {
         return addExecutor(label, null, executor);
     }
 
-    public HandledExecutor addExecutor(String label, String permission, ScriptExecutor i) {
+    public HandledCommand addExecutor(String label, String permission, BiConsumer<CommandSender, Bindings> executor) {
         Preconditions.checkArgument(!label.equals("script"));
-        HandledExecutor handled = new HandledExecutor(this, new Executor(label, permission, i));
+        HandledCommand handled = new HandledCommand(this, label, executor, permission);
         main.addExecutor(handled);
         commands.add(handled);
         return handled;
@@ -335,31 +337,6 @@ public final class ScriptPlugin implements Named, Closeable {
     @Override
     public String getName() {
         return getDescription("name");
-    }
-
-    public static class Executor {
-
-        private final String permission;
-        private final String label;
-        private final ScriptExecutor executor;
-
-        public Executor(String label, String permission, ScriptExecutor executor) {
-            this.label = label;
-            this.permission = permission;
-            this.executor = executor;
-        }
-
-        public String getPermission() {
-            return permission;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public ScriptExecutor getExecutor() {
-            return executor;
-        }
     }
 
     @RequiredArgsConstructor

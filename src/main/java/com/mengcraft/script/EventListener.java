@@ -10,11 +10,10 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.RegisteredListener;
 
+import javax.script.Bindings;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.logging.Level;
 
 /**
  * Created on 16-10-17.
@@ -48,7 +47,7 @@ public class EventListener implements Listener {
         }
     }
 
-    public HandledListener add(ScriptPlugin script, Consumer<Event> executor, int order) {
+    public HandledListener add(ScriptPlugin script, Bindings executor, int order) {
         CustomRegisteredListener custom = handledExecutors.computeIfAbsent(Utils.getEventPriority(order),
                 priority -> new CustomRegisteredListener(priority, false));
         if (custom.isEmpty()) {
@@ -83,11 +82,7 @@ public class EventListener implements Listener {
         public void callEvent(Event event) {
             if (clz == event.getClass()) {
                 for (HandledListener listener : executors) {
-                    try {
-                        listener.getExecutor().accept(event);
-                    } catch (Exception e) {
-                        listener.getPlugin().getLogger().log(Level.SEVERE, name(), e);
-                    }
+                    listener.handle(event);
                 }
             }
         }

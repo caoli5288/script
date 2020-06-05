@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.mengcraft.script.EventMapping;
 import com.mengcraft.script.Formatter;
 import com.mengcraft.script.ScriptBootstrap;
+import com.mengcraft.script.util.LazyValue;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Utils;
 import lombok.Data;
@@ -175,6 +176,7 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         Object global = ctx.eval("this", bindings);
         Object jsObject = ctx.eval("Object", bindings);
         ((Invocable) ctx).invokeMethod(jsObject, "bindProperties", global, this);
+        ctx.eval("load(\"nashorn:mozilla_compat.js\"); importPackage(java.lang, java.util, org.bukkit);", bindings);
         ctx.eval(new FileReader(jsFile), bindings);
     }
 
@@ -195,11 +197,11 @@ public class ScriptingLoader extends PluginBase implements PluginLoader, Named, 
         return null;
     }
 
-    private final Logger logger = new PluginLogger(this);
+    private final LazyValue<Logger> logger = new LazyValue<>(() -> new PluginLogger(this));
 
     @Override
     public Logger getLogger() {
-        return logger;
+        return logger.get();
     }
 
     @Override
