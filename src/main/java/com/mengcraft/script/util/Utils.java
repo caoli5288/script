@@ -9,6 +9,7 @@ import org.yaml.snakeyaml.Yaml;
 import javax.script.Bindings;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -72,6 +73,16 @@ public class Utils {
 
     public static <T, Obj> T as(Obj obj, Class<T> cls) {
         return (T) obj;
+    }
+
+    public static Field getAccessibleField(Class<?> cls, String name) {
+        try {
+            Field f = cls.getDeclaredField(name);
+            f.setAccessible(true);
+            return f;
+        } catch (Exception e) {
+        }
+        return null;
     }
 
     public static EventPriority getEventPriority(int priority) {

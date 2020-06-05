@@ -11,7 +11,6 @@ import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.experimental.var;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -19,6 +18,7 @@ import org.bukkit.Server;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarFlag;
 import org.bukkit.boss.BarStyle;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.SimpleCommandMap;
@@ -39,13 +39,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
-import static com.mengcraft.script.util.Utils.as;
 import static org.bukkit.util.NumberConversions.toInt;
 
 /**
  * Created on 16-10-17.
  */
 public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
+
+    private static final Field SIMPLE_PLUGIN_MANAGER_commandMap = Utils.getAccessibleField(SimplePluginManager.class, "commandMap");
+    private static final Field SIMPLE_COMMAND_MAP_knownCommands = Utils.getAccessibleField(SimpleCommandMap.class, "knownCommands");
 
     private static ScriptBootstrap plugin;
     private final ScriptCommand scriptCommand = new ScriptCommand();
@@ -206,12 +208,8 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     protected void addExecutor(HandledCommand executor) {
         Preconditions.checkState(!scriptCommand.containsKey(executor.getLabel()));
         String label = executor.getLabel();
-        Field field = SimplePluginManager.class.getDeclaredField("commandMap");
-        field.setAccessible(true);
-        var commandMap = as(field.get(getServer().getPluginManager()), SimpleCommandMap.class);
-        Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
-        f.setAccessible(true);
-        var knownCommands = as(f.get(commandMap), Map.class);
+        Object commandMap = SIMPLE_PLUGIN_MANAGER_commandMap.get(getServer().getPluginManager());
+        Map<String, Command> knownCommands = (Map<String, Command>) SIMPLE_COMMAND_MAP_knownCommands.get(commandMap);
         PluginCommand command = getCommand("script");
         knownCommands.putIfAbsent(label, command);
         knownCommands.putIfAbsent("script:" + label, command);
@@ -223,15 +221,11 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     protected boolean remove(HandledCommand handled) {
         if (scriptCommand.containsKey(handled.getLabel())) {
             String label = handled.getLabel();
-            Field field = SimplePluginManager.class.getDeclaredField("commandMap");
-            field.setAccessible(true);
-            SimpleCommandMap i = SimpleCommandMap.class.cast(field.get(getServer().getPluginManager()));
-            Field f = SimpleCommandMap.class.getDeclaredField("knownCommands");
-            f.setAccessible(true);
-            Map handler = Map.class.cast(f.get(i));
+            Object commandMap = SIMPLE_PLUGIN_MANAGER_commandMap.get(getServer().getPluginManager());
+            Map<String, Command> knownCommands = (Map<String, Command>) SIMPLE_COMMAND_MAP_knownCommands.get(commandMap);
             PluginCommand command = getCommand("script");
-            handler.remove(label, command);
-            handler.remove("script:" + label, command);
+            knownCommands.remove(label, command);
+            knownCommands.remove("script:" + label, command);
             scriptCommand.remove(label);
             scriptCommand.remove("script:" + label);
             return true;
