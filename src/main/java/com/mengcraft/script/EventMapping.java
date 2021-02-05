@@ -50,9 +50,6 @@ public final class EventMapping {
 
     @SneakyThrows
     public EventListener getListener(String name) {
-        if (GroovyIntegration.isIntegrated()) {
-            return GroovyIntegration.getListener(name);
-        }
         name = name.toLowerCase();
         if (mapping.containsKey(name)) {
             return mapping.get(name).getListener();
@@ -70,10 +67,8 @@ public final class EventMapping {
     }
 
     protected void loadClasses() {
-        if (!GroovyIntegration.isIntegrated()) {
-            URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
-            loadClasses(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
-        }
+        URL path = Bukkit.class.getProtectionDomain().getCodeSource().getLocation();
+        loadClasses(null, Bukkit.class.getClassLoader(), path, "org/bukkit/event/(.*)/(.*)\\.class");
     }
 
     protected void loadClasses(Plugin plugin, ClassLoader loader, URL path, String regex) {
@@ -118,9 +113,6 @@ public final class EventMapping {
 
     @SneakyThrows
     public void init(Plugin plugin) {
-        if (GroovyIntegration.isIntegrated()) {
-            GroovyIntegration.loadClasses(plugin);
-        }
         if (plugins.add(plugin.getName().toLowerCase())) {
             Class<?> pluginClass = plugin.getClass();
             URL path = pluginClass.getProtectionDomain().getCodeSource().getLocation();
