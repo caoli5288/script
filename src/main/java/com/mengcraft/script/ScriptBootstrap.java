@@ -7,6 +7,7 @@ import com.mengcraft.script.loader.ScriptLoader;
 import com.mengcraft.script.loader.ScriptPluginException;
 import com.mengcraft.script.plugin.ScriptingLoader;
 import com.mengcraft.script.util.BossBarWrapper;
+import com.mengcraft.script.util.MavenLibs;
 import com.mengcraft.script.util.Named;
 import com.mengcraft.script.util.Utils;
 import lombok.RequiredArgsConstructor;
@@ -88,6 +89,16 @@ public final class ScriptBootstrap extends JavaPlugin implements IScriptSpi {
     public void onLoad() {
         plugin = this;
         jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByName("nashorn");
+        if (jsEngine == null) {
+            MavenLibs.of("org.openjdk.nashorn", "nashorn-core", "15.3")
+                    .load();
+            try {
+                Class.forName("org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            jsEngine = new ScriptEngineManager(getClassLoader()).getEngineByName("nashorn");
+        }
         Utils.setup(jsEngine);
     }
 
